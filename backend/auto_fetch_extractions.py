@@ -9,6 +9,9 @@ from supabase import create_client, Client
 SUPABASE_URL = "https://fcokqyuccicfxqxughih.supabase.co"
 SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZjb2txeXVjY2ljZnhxeHVnaGloIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4NzE1MzkxNCwiZXhwIjoyMTAyNzI5OTE0fQ.QP66z1Qe1L9zYI_6zUAl3Rt89H2xkzTrDRGCXpQZNPg"
 
+def get_supabase_client():
+    return create_client(SUPABASE_URL, SUPABASE_KEY)
+
 def fetch_latest_extractions():
     url = "https://www.superenalotto.com/risultati"
     print(f"[*] Connessione a {url}...")
@@ -117,8 +120,64 @@ def sync_to_supabase(draws):
     try:
         response = supabase.table('historical_extractions').upsert(draws).execute()
         print(f"[SUCCESS] {len(draws)} estrazioni salvate/aggiornate in Supabase.")
+        
+        # Dopo aver salvato le estrazioni, controlliamo le schedine generate dall'IA
+        # per le estrazioni appena scaricate
+        check_ai_global_wins(draws)
+        
     except Exception as e:
-        print(f"[!] Errore durante l'inserimento in Supabase: {e}")
+        print(f"[ERROR] Errore durante il salvataggio su Supabase: {e}")
+
+def check_ai_global_wins(recent_draws):
+    print("[*] Avvio controllo vincite IA globali...")
+    client = get_supabase_client()
+    if not client:
+        return
+        
+    for draw in recent_draws:
+        target_date = draw["date"]
+        try:
+            # Recupera le schedine IA per questa data
+            response = client.table("ai_global_generations").select("*").eq("target_date", target_date).execute()
+            generations = response.data
+            
+            if not generations:
+                continue
+                
+            winning_numbers = {draw["n1"], draw["n2"], draw["n3"], draw["n4"], draw["n5"], draw["n6"]}
+            
+            total_3 = 0
+            total_4 = 0
+            total_5 = 0
+            total_6 = 0
+            
+            for gen in generations:
+                sestine = gen.get("sestine", [])
+                
+                for sestina in sestine:
+                    sestina_set = set(sestina)
+                    matches = len(sestina_set.intersection(winning_numbers))
+                    
+                    if matches == 3: total_3 += 1
+                    elif matches == 4: total_4 += 1
+                    elif matches == 5: total_5 += 1
+                    elif matches == 6: total_6 += 1
+            
+            if total_3 > 0 or total_4 > 0 or total_5 > 0 or total_6 > 0:
+                print(f"[*] Trovate vincite per il {target_date}: 3={total_3}, 4={total_4}, 5={total_5}, 6={total_6}")
+                
+                # Salva in global_win_stats
+                stat_data = {
+                    "draw_date": target_date,
+                    "total_3": total_3,
+                    "total_4": total_4,
+                    "total_5": total_5,
+                    "total_6": total_6
+                }
+                client.table("global_win_stats").upsert(stat_data).execute()
+                
+        except Exception as e:
+            print(f"[ERROR] Impossibile verificare vincite per {target_date}: {e}")
 
 if __name__ == "__main__":
     print("--- AUTO FETCH SUPERENALOTTO ---")
