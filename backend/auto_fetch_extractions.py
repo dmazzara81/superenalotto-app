@@ -36,15 +36,25 @@ def fetch_latest_extractions():
             continue
             
         title_text = title_tag.get_text(strip=True)
-        # Esempio: "Estrazione SuperEnalotto n° 130 del 17/08/2026" o simile
-        match = re.search(r'n[^\d]*(\d+)[^\d]+(\d{2}/\d{2}/\d{4})', title_text)
-        if not match:
+        # Esempio: "Estrazione del 22 agosto 2026 - concorso n. 135"
+        match_concorso = re.search(r'concorso n\.\s*(\d+)', title_text)
+        if not match_concorso:
             continue
             
-        concorso = int(match.group(1))
-        date_str = match.group(2)
-        date_obj = datetime.strptime(date_str, "%d/%m/%Y")
-        date_formatted = date_obj.strftime("%Y-%m-%d")
+        concorso = int(match_concorso.group(1))
+        
+        # Recuperiamo la data dal link "Vai alle quote e premi" che è nel formato dd-mm-yyyy
+        date_formatted = ""
+        link_tag = box.find('a', href=re.compile(r'/risultati-estrazione/\d{2}-\d{2}-\d{4}'))
+        if link_tag:
+            match_date = re.search(r'/risultati-estrazione/(\d{2}-\d{2}-\d{4})', link_tag['href'])
+            if match_date:
+                date_str = match_date.group(1) # es 22-08-2026
+                date_obj = datetime.strptime(date_str, "%d-%m-%Y")
+                date_formatted = date_obj.strftime("%Y-%m-%d")
+        
+        if not date_formatted:
+            continue
 
         numbers_div = box.find('div', class_='boxDrawNumbers')
         if not numbers_div:
@@ -62,11 +72,13 @@ def fetch_latest_extractions():
         n5 = int(num_tags[4].get_text(strip=True))
         n6 = int(num_tags[5].get_text(strip=True))
         
-        # Jolly è spesso contrassegnato o è il settimo
-        jolly = int(num_tags[6].get_text(strip=True))
+        # Jolly è spesso contrassegnato o è il settimo (estraiamo solo i numeri)
+        jolly_match = re.search(r'(\d+)', num_tags[6].get_text(strip=True))
+        jolly = int(jolly_match.group(1)) if jolly_match else 0
         
-        # SuperStar è l'ottavo
-        superstar = int(num_tags[7].get_text(strip=True))
+        # SuperStar è l'ottavo (estraiamo solo i numeri)
+        superstar_match = re.search(r'(\d+)', num_tags[7].get_text(strip=True))
+        superstar = int(superstar_match.group(1)) if superstar_match else 0
         
         # Recupero del Jackpot
         jackpot_str = "0 €"
