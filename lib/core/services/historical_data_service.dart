@@ -6,12 +6,14 @@ class ExtractionData {
   final List<int> numbers;
   final int jolly;
   final int superstar;
+  final String? jackpot;
 
   ExtractionData({
     required this.date,
     required this.numbers,
     required this.jolly,
     required this.superstar,
+    this.jackpot,
   });
 }
 
@@ -45,6 +47,7 @@ class HistoricalDataService {
           numbers: nums,
           jolly: response['jolly'] as int,
           superstar: response['superstar'] as int,
+          jackpot: response.containsKey('jackpot') ? response['jackpot'] as String? : null,
         );
       }
     } catch (e) {

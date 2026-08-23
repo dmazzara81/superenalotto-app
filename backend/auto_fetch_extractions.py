@@ -68,6 +68,16 @@ def fetch_latest_extractions():
         # SuperStar è l'ottavo
         superstar = int(num_tags[7].get_text(strip=True))
         
+        # Recupero del Jackpot
+        jackpot_str = "0 €"
+        footer_cell2 = box.find('div', class_='boxDrawFooterCell2')
+        if footer_cell2:
+            raw_text = footer_cell2.get_text(strip=True)
+            # Estraiamo solo numeri e puntini per evitare problemi di codifica con il simbolo Euro
+            match_jackpot = re.search(r'([\d\.]+)', raw_text)
+            if match_jackpot:
+                jackpot_str = match_jackpot.group(1) + " €"
+        
         draws.append({
             "concorso": concorso,
             "date": date_formatted,
@@ -78,7 +88,8 @@ def fetch_latest_extractions():
             "n5": n5,
             "n6": n6,
             "jolly": jolly,
-            "superstar": superstar
+            "superstar": superstar,
+            "jackpot": jackpot_str
         })
         
     return draws

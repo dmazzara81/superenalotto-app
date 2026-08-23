@@ -322,7 +322,30 @@ class _HomeScreenState extends State<HomeScreen> {
                                       child: Text(_latestExtraction!.superstar.toString(), style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
                                     ),
                                   ],
-                                )
+                                ),
+                                if (_latestExtraction!.jackpot != null) ...[
+                                  const SizedBox(height: 24),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                    decoration: BoxDecoration(
+                                      color: Colors.amber.withOpacity(0.1),
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(color: Colors.amber.withOpacity(0.3)),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        const Icon(Icons.monetization_on, color: Colors.amber, size: 24),
+                                        const SizedBox(width: 8),
+                                        const Text('JACKPOT IN PALIO: ', style: TextStyle(color: Colors.white70, fontSize: 14)),
+                                        Text(
+                                          _latestExtraction!.jackpot!,
+                                          style: const TextStyle(color: Colors.amber, fontWeight: FontWeight.bold, fontSize: 20),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
                               ],
                             ),
                           ),
