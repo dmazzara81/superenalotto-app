@@ -51,7 +51,7 @@ def get_consensus_probabilities():
         dummy_history = np.zeros((100, 15, 90)) 
         
         # 1. Calcolo Probabilità
-        consensus_probs = engine.compute_consensus(dummy_history)
+        consensus_probs, _ = engine.compute_consensus(dummy_history)
         
         # 2. Strutturiamo il dizionario: { numero (1-90) : probabilità_normalizzata }
         # Assicuriamoci che i valori siano float python standard, non numpy.float64

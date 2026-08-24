@@ -142,7 +142,7 @@ class SuperEnalottoEnsembleEngine:
             weight = self.dynamic_weights.get(model_name, 0.0)
             consensus_vector += (probs * weight)
             
-        return consensus_vector
+        return consensus_vector, model_results
 
     def extrapolate_best_sextuplets(self, consensus_vector: np.ndarray, num_combinations: int = 5) -> List[List[int]]:
         """
@@ -174,8 +174,8 @@ if __name__ == "__main__":
     # Simulazione array dati storici (shape generica, l'effettiva dipenderà dal caricamento NPZ)
     dummy_history = np.zeros((100, 15, 90)) 
     
-    # 1. Calcolo del Consenso armonizzato
-    consensus_probs = engine.compute_consensus(dummy_history)
+    # 1. Calcolo del Consenso armonizzato e probabilità singole
+    consensus_probs, individual_probs = engine.compute_consensus(dummy_history)
     
     # 2. Estrapolazione delle sestine finali
     best_sextuplets = engine.extrapolate_best_sextuplets(consensus_probs, num_combinations=3)

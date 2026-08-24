@@ -21,26 +21,12 @@ class _HomeScreenState extends State<HomeScreen> {
   
   Map<String, dynamic>? _globalWinStats;
   
-  final List<Map<String, dynamic>> _allStats = [
-    {'title': '🔥 I Super-Ritardatari', 'description': 'Il numero 89 manca all\'appello da ben 132 giorni. Sarà la volta buona?', 'color': Colors.redAccent, 'icon': Icons.access_time_filled},
-    {'title': '⚖️ Pari vs Dispari', 'description': 'Nelle ultime 20 estrazioni, il 65% dei numeri estratti è stato Pari. Trend in vista?', 'color': Colors.blueAccent, 'icon': Icons.balance},
-    {'title': '🧠 Oltre la Statistica', 'description': 'L\'IA non gioca i numeri "Caldi". Analizza 4000 estrazioni per trovare la combinazione probabilistica perfetta!', 'color': Colors.amber.shade700, 'icon': Icons.psychology},
-    {'title': '👯 Gli Inseparabili', 'description': 'L\'ambo 12 - 45 è uscito insieme più di 15 volte negli ultimi due anni.', 'color': Colors.purpleAccent, 'icon': Icons.group},
-    {'title': '🌟 La Stella Magica', 'description': 'Il numero SuperStar più frequente del 2025 è stato il 49!', 'color': Colors.orangeAccent, 'icon': Icons.star},
-    {'title': '🔢 Gemelli Diversi', 'description': 'I numeri gemelli (11, 22, 33...) hanno una probabilità di uscita combinata del 12%.', 'color': Colors.greenAccent, 'icon': Icons.copy},
-    {'title': '📉 Numeri Freddissimi', 'description': 'Il 18 non si fa vedere da mesi, mentre il 77 è in una "cold streak".', 'color': Colors.cyanAccent, 'icon': Icons.ac_unit},
-    {'title': '📈 I Più Frequenti', 'description': 'Storicamente, il 90 e l\'85 sono i padroni incontrastati del SuperEnalotto.', 'color': Colors.tealAccent, 'icon': Icons.trending_up},
-    {'title': '🎰 Jackpot Record', 'description': 'Sapevi che la vincita più alta della storia è stata di oltre 371 Milioni di Euro?', 'color': Colors.yellowAccent, 'icon': Icons.monetization_on},
-    {'title': '📐 Geometria', 'description': 'Tracciando linee tra i numeri estratti, la forma più comune sulla schedina è il "Rettangolo".', 'color': Colors.indigoAccent, 'icon': Icons.architecture},
-    {'title': '📅 Mese Fortunato', 'description': 'Novembre è statisticamente il mese con più "6" realizzati!', 'color': Colors.pinkAccent, 'icon': Icons.calendar_month},
-  ];
-  late List<Map<String, dynamic>> _currentStats;
+  List<Map<String, dynamic>> _currentStats = [];
 
   @override
   void initState() {
     super.initState();
-    _allStats.shuffle();
-    _currentStats = _allStats.take(5).toList();
+    _fetchCuriosities();
     _calculateNextDraw();
     _fetchExtraction();
     _fetchGlobalStats();
@@ -62,6 +48,42 @@ class _HomeScreenState extends State<HomeScreen> {
       }
     } catch (e) {
       // Ignora, non mostriamo nulla se fallisce
+    }
+  }
+
+  Future<void> _fetchCuriosities() async {
+    try {
+      // Preleviamo 5 general e 5 extraction-based
+      final res = await Supabase.instance.client
+          .from('daily_curiosities')
+          .select()
+          .order('created_at', ascending: false)
+          .limit(15);
+      
+      List<Map<String, dynamic>> fetched = [];
+      for (var item in res) {
+        // Conversione colore hex
+        String hexColor = item['color_hex'] ?? '#448AFF';
+        hexColor = hexColor.replaceAll('#', '');
+        if (hexColor.length == 6) hexColor = 'FF$hexColor';
+        Color color = Color(int.parse(hexColor, radix: 16));
+        
+        fetched.add({
+          'title': item['title'] ?? 'Curiosità',
+          'description': item['description'] ?? '',
+          'color': color,
+          'icon': Icons.auto_awesome, // Fallback sicuro
+        });
+      }
+      
+      if (mounted) {
+        setState(() {
+          fetched.shuffle();
+          _currentStats = fetched.take(10).toList();
+        });
+      }
+    } catch (e) {
+      debugPrint("Errore fetch curiosities: $e");
     }
   }
 

@@ -21,6 +21,20 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
   bool _isGenerating = false;
   String _errorMessage = '';
   
+  final List<String> _availableModels = [
+    'Ensemble (Consigliato)',
+    'Markov_Chains',
+    'Bayesian_Filters',
+    'LSTM_Neural_Networks',
+    'Genetic_Algorithms',
+    'ARIMA_Time_Series',
+    'Monte_Carlo_Simulations',
+    'Random_Forest',
+    'Hidden_Markov_Models',
+    'Transformer_Attention'
+  ];
+  String _selectedModel = 'Ensemble (Consigliato)';
+  
   Map<int, double>? _cachedProbabilities;
 
   @override
@@ -73,10 +87,19 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
 
       final Map<String, dynamic> rawConsensus = response['probabilities'];
       final Map<String, dynamic>? rawSuperstarConsensus = response['superstar_probabilities'];
+      final Map<String, dynamic>? individualModels = response['individual_models'];
       final String targetDate = response['target_date'] ?? '';
       
       Map<int, double> consensusVector = {};
-      rawConsensus.forEach((key, value) {
+      Map<String, dynamic> sourceProbabilities = rawConsensus;
+      
+      if (_selectedModel != 'Ensemble (Consigliato)' && individualModels != null) {
+        if (individualModels.containsKey(_selectedModel)) {
+          sourceProbabilities = individualModels[_selectedModel];
+        }
+      }
+      
+      sourceProbabilities.forEach((key, value) {
         consensusVector[int.parse(key)] = (value as num).toDouble();
       });
       
@@ -463,6 +486,39 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
               ),
             ),
             const SizedBox(height: 24),
+
+            // Selezione Modello IA
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.white24),
+              ),
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<String>(
+                  value: _selectedModel,
+                  isExpanded: true,
+                  dropdownColor: const Color(0xFF1A1A2E),
+                  icon: const Icon(Icons.arrow_drop_down, color: Colors.amber),
+                  style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                  onChanged: (String? newValue) {
+                    if (newValue != null) {
+                      setState(() {
+                        _selectedModel = newValue;
+                      });
+                    }
+                  },
+                  items: _availableModels.map<DropdownMenuItem<String>>((String value) {
+                    return DropdownMenuItem<String>(
+                      value: value,
+                      child: Text(value.replaceAll('_', ' ')),
+                    );
+                  }).toList(),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
 
             // Pulsanti Generazione
             Row(

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:fl_chart/fl_chart.dart';
 
 class StatsScreen extends StatefulWidget {
   const StatsScreen({super.key});
@@ -16,6 +17,7 @@ class _StatsScreenState extends State<StatsScreen> {
   List<int> _ssHotNumbers = [];
   List<int> _ssColdNumbers = [];
   String _targetDate = '';
+  final Map<int, double> _probabilities = {};
 
   @override
   void initState() {
@@ -27,7 +29,7 @@ class _StatsScreenState extends State<StatsScreen> {
     try {
       final response = await Supabase.instance.client
           .from('number_probabilities')
-          .select('hot_numbers, cold_numbers, superstar_hot, superstar_cold, target_date')
+          .select('hot_numbers, cold_numbers, superstar_hot, superstar_cold, probabilities, target_date')
           .order('target_date', ascending: false)
           .limit(1)
           .single();
@@ -38,6 +40,14 @@ class _StatsScreenState extends State<StatsScreen> {
         _ssHotNumbers = List<int>.from(response['superstar_hot'] ?? []);
         _ssColdNumbers = List<int>.from(response['superstar_cold'] ?? []);
         _targetDate = response['target_date'] ?? '';
+        
+        final Map<String, dynamic>? rawProbs = response['probabilities'];
+        if (rawProbs != null) {
+          rawProbs.forEach((key, value) {
+            _probabilities[int.parse(key)] = (value as num).toDouble();
+          });
+        }
+        
         _isLoading = false;
       });
     } catch (e) {
@@ -54,7 +64,7 @@ class _StatsScreenState extends State<StatsScreen> {
       length: 2,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Statistiche Base', style: TextStyle(fontWeight: FontWeight.bold)),
+          title: const Text('Statistiche e Grafici', style: TextStyle(fontWeight: FontWeight.bold)),
           backgroundColor: Theme.of(context).scaffoldBackgroundColor,
           elevation: 0,
           bottom: const TabBar(
@@ -82,17 +92,15 @@ class _StatsScreenState extends State<StatsScreen> {
                   )
                 : TabBarView(
                     children: [
-                      // TAB 1: SESTINA BASE
                       _buildStatsTab(
                         title: 'Trend Sestina',
                         hotNumbers: _hotNumbers,
                         coldNumbers: _coldNumbers,
                       ),
-                      // TAB 2: SUPERSTAR
                       _buildStatsTab(
                         title: 'Trend SuperStar',
-                        hotNumbers: _ssHotNumbers.isNotEmpty ? _ssHotNumbers : _hotNumbers, // Fallback
-                        coldNumbers: _ssColdNumbers.isNotEmpty ? _ssColdNumbers : _coldNumbers, // Fallback
+                        hotNumbers: _ssHotNumbers.isNotEmpty ? _ssHotNumbers : _hotNumbers,
+                        coldNumbers: _ssColdNumbers.isNotEmpty ? _ssColdNumbers : _coldNumbers,
                       ),
                     ],
                   ),
@@ -100,189 +108,147 @@ class _StatsScreenState extends State<StatsScreen> {
     );
   }
 
-  Widget _buildStatsTab({required String title, required List<int> hotNumbers, required List<int> coldNumbers}) {
-    return RefreshIndicator(
-      onRefresh: _fetchStats,
-      color: Colors.amber,
-      child: SingleChildScrollView(
-        physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              title,
-              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Aggiornati al $_targetDate',
-              style: TextStyle(color: Theme.of(context).colorScheme.secondary),
-            ),
-            const SizedBox(height: 32),
-
-            // INFO BOX
-            Container(
-              padding: const EdgeInsets.all(16),
-              margin: const EdgeInsets.only(bottom: 24),
-              decoration: BoxDecoration(
-                color: Colors.blueAccent.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.blueAccent.withOpacity(0.3)),
-              ),
-              child: const Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Icon(Icons.info_outline, color: Colors.blueAccent),
-                  SizedBox(width: 16),
-                  Expanded(
-                    child: Text(
-                      'Queste classifiche mostrano la pura frequenza storica passata.\nNon sono previsioni per il futuro. Usa l\'IA Ensemble per calcolare la probabilità della prossima estrazione.',
-                      style: TextStyle(color: Colors.white70, fontSize: 13, height: 1.4),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            // HOT NUMBERS
-            _buildNumberSection(
-              title: 'I 10 Numeri più Caldi 🔥',
-              description: 'I numeri che sono stati estratti con maggiore frequenza storicamente.',
-              numbers: hotNumbers,
-              gradientColors: [Colors.orange.shade800, Colors.red.shade900],
-              shadowColor: Colors.red.withOpacity(0.5),
-            ),
-
-            const SizedBox(height: 32),
-
-            // COLD NUMBERS
-            _buildNumberSection(
-              title: 'I 10 Numeri più Freddi 🧊',
-              description: 'I numeri che sono usciti meno frequentemente nello storico.',
-              numbers: coldNumbers,
-              gradientColors: [Colors.blue.shade800, Colors.cyan.shade900],
-              shadowColor: Colors.cyan.withOpacity(0.5),
-            ),
-            
-            const SizedBox(height: 40),
-            
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.amber.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.amber.withOpacity(0.3)),
-              ),
-              child: const Row(
-                children: [
-                  Icon(Icons.lock_outline, color: Colors.amber),
-                  SizedBox(width: 16),
-                  Expanded(
-                    child: Text(
-                      'Sblocca il Generatore PRO per combinare i pesi e creare la combinazione perfetta.',
-                      style: TextStyle(color: Colors.white70, fontSize: 13),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildNumberSection({
+  Widget _buildStatsTab({
     required String title,
-    required String description,
-    required List<int> numbers,
-    required List<Color> gradientColors,
-    required Color shadowColor,
+    required List<int> hotNumbers,
+    required List<int> coldNumbers,
   }) {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Theme.of(context).colorScheme.surface,
-            Theme.of(context).colorScheme.surface.withOpacity(0.8),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.white.withOpacity(0.05)),
-        boxShadow: [
-          BoxShadow(
-            color: shadowColor,
-            blurRadius: 15,
-            spreadRadius: -8,
-            offset: const Offset(0, 8),
-          )
-        ],
-      ),
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            title,
-            style: const TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            description,
-            style: const TextStyle(
-              fontSize: 14,
-              color: Colors.white70,
-              height: 1.4,
-            ),
+            'Aggiornato al: $_targetDate',
+            style: const TextStyle(color: Colors.white54, fontStyle: FontStyle.italic),
           ),
           const SizedBox(height: 24),
-          Wrap(
-            spacing: 12,
-            runSpacing: 12,
-            children: numbers.map((num) {
-              return Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: LinearGradient(
-                    colors: gradientColors,
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: gradientColors.last.withOpacity(0.5),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    )
-                  ],
-                ),
-                child: Center(
+          
+          _buildChartSection(
+            title: '🔥 Numeri Più Caldi (Top 10)',
+            numbers: hotNumbers,
+            color: Colors.redAccent,
+          ),
+          
+          const SizedBox(height: 48),
+          
+          _buildChartSection(
+            title: '❄️ Numeri Più Freddi (Top 10)',
+            numbers: coldNumbers,
+            color: Colors.lightBlueAccent,
+          ),
+          
+          const SizedBox(height: 40),
+          
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.05),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.white12),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(Icons.info_outline, color: Colors.amber, size: 24),
+                const SizedBox(width: 16),
+                Expanded(
                   child: Text(
-                    num.toString(),
-                    style: const TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w900,
-                      color: Colors.white,
-                    ),
+                    'I grafici a barre mostrano la probabilità normalizzata calcolata dall\'IA per l\'estrazione corrente. Il picco massimo rappresenta il numero col punteggio più alto nel vettore di consenso.',
+                    style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 14, height: 1.4),
                   ),
                 ),
-              );
-            }).toList(),
+              ],
+            ),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildChartSection({
+    required String title,
+    required List<int> numbers,
+    required Color color,
+  }) {
+    if (numbers.isEmpty) return const SizedBox();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(title, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
+        const SizedBox(height: 24),
+        SizedBox(
+          height: 250,
+          child: BarChart(
+            BarChartData(
+              alignment: BarChartAlignment.spaceAround,
+              maxY: 1.0,
+              barTouchData: BarTouchData(
+                enabled: true,
+                touchTooltipData: BarTouchTooltipData(
+                  getTooltipItem: (group, groupIndex, rod, rodIndex) {
+                    return BarTooltipItem(
+                      '${numbers[group.x.toInt()]}\n',
+                      const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                      children: <TextSpan>[
+                        TextSpan(
+                          text: '${(rod.toY * 100).toStringAsFixed(1)}%',
+                          style: TextStyle(color: color, fontSize: 14, fontWeight: FontWeight.w500),
+                        ),
+                      ],
+                    );
+                  },
+                ),
+              ),
+              titlesData: FlTitlesData(
+                show: true,
+                bottomTitles: AxisTitles(
+                  sideTitles: SideTitles(
+                    showTitles: true,
+                    getTitlesWidget: (double value, TitleMeta meta) {
+                      if (value.toInt() >= numbers.length) return const SizedBox();
+                      return Padding(
+                        padding: const EdgeInsets.only(top: 8.0),
+                        child: Text(
+                          numbers[value.toInt()].toString(),
+                          style: const TextStyle(color: Colors.white70, fontWeight: FontWeight.bold, fontSize: 12),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+              ),
+              gridData: const FlGridData(show: false),
+              borderData: FlBorderData(show: false),
+              barGroups: List.generate(numbers.length, (index) {
+                int number = numbers[index];
+                double maxProb = _probabilities.values.isEmpty ? 1.0 : _probabilities.values.reduce((a, b) => a > b ? a : b);
+                double rawProb = _probabilities[number] ?? 0.0;
+                double normalizedY = maxProb > 0 ? (rawProb / maxProb) : 0.0;
+                
+                return BarChartGroupData(
+                  x: index,
+                  barRods: [
+                    BarChartRodData(
+                      toY: normalizedY,
+                      color: color,
+                      width: 16,
+                      borderRadius: const BorderRadius.only(
+                        topLeft: Radius.circular(4),
+                        topRight: Radius.circular(4),
+                      ),
+                    ),
+                  ],
+                );
+              }),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

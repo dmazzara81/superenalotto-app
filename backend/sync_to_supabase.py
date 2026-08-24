@@ -7,6 +7,7 @@ from supabase import create_client, Client
 # Importiamo il motore AI
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from models.ensemble_engine import SuperEnalottoEnsembleEngine
+from curiosities_engine import generate_and_save_curiosities
 
 # ==============================================================================
 # CONFIGURAZIONE SUPABASE
@@ -44,12 +45,12 @@ def main():
         real_history_ss = np.zeros((100, 90))
         
     print("[*] Esecuzione calcolo consenso Sestina...")
-    consensus_probs = engine.compute_consensus(real_history)
+    consensus_probs, individual_probs = engine.compute_consensus(real_history)
     
     # Simulo lo storico separato del SuperStar (stesso range 1-90)
     print("[*] Calcolo probabilità separate per il Numero SuperStar...")
     # Per il SuperStar passiamo semplicemente lo storico delle sue uscite 
-    ss_consensus_probs = engine.compute_consensus(np.expand_dims(real_history_ss, axis=1))
+    ss_consensus_probs, _ = engine.compute_consensus(np.expand_dims(real_history_ss, axis=1))
     
     # 3. Formattazione Dati per il Database
     # Creiamo il JSONB e le array richieste dalla tabella SQL `number_probabilities`
@@ -66,6 +67,11 @@ def main():
     ss_cold_numbers = [int(idx + 1) for idx in ss_sorted_indices[:10]]
     ss_hot_numbers = [int(idx + 1) for idx in ss_sorted_indices[::-1][:10]]
     
+    # Formattiamo le probabilità dei modelli singoli
+    individual_models_formatted = {}
+    for model_name, probs in individual_probs.items():
+        individual_models_formatted[model_name] = {str(i + 1): float(probs[i]) for i in range(90)}
+    
     target_date = datetime.now().strftime("%Y-%m-%d")
     
     payload = {
@@ -75,7 +81,8 @@ def main():
         "cold_numbers": cold_numbers,
         "superstar_probabilities": ss_probabilities_dict,
         "superstar_hot": ss_hot_numbers,
-        "superstar_cold": ss_cold_numbers
+        "superstar_cold": ss_cold_numbers,
+        "individual_models": individual_models_formatted
     }
 
     # 4. Inserimento (Upsert) nel Cloud
@@ -87,6 +94,10 @@ def main():
         
         response = supabase.table("number_probabilities").insert(payload).execute()
         print(f"[SUCCESS] Probabilità salvate su Supabase per la data: {target_date}")
+        
+        # 5. Generazione Curiosità tramite Gemini
+        generate_and_save_curiosities(hot_numbers, cold_numbers, target_date, supabase)
+        
     except Exception as e:
         print(f"[ERROR] Impossibile salvare su Supabase: {str(e)}")
 
