@@ -33,9 +33,9 @@ def generate_and_save_curiosities(hot_numbers: list, cold_numbers: list, target_
         I numeri storicamente più "Caldi" (frequenti) calcolati oggi sono: {hot_numbers}.
         I numeri storicamente più "Freddi" (ritardatari) calcolati oggi sono: {cold_numbers}.
         
-        Genera esattamente 10 curiosità per gli utenti dell'app:
-        - 5 devono essere curiosità "generali" o matematiche sul lotto/superenalotto (is_extraction_based = false).
-        - 5 devono riguardare specificamente i numeri caldi o freddi di oggi, trend del periodo, o coincidenze con la data di oggi (is_extraction_based = true).
+        Genera esattamente 10 curiosità molto variegate per gli utenti dell'app. Esplora tanti argomenti diversi:
+        - 5 devono essere curiosità "generali" o matematiche (is_extraction_based = false). Puoi parlare di: Jackpot record storici, Pari vs Dispari, Numeri Gemelli (11, 22, 33...), Ambi o Terni inseparabili storicamente, Decine o Cadenze più frequenti, figure geometriche sulle schedine, probabilità matematiche (es. fare 6), mesi dell'anno più fortunati.
+        - 5 devono essere legate all'estrazione di oggi, ai numeri caldi/freddi forniti, al trend del periodo o coincidenze con la data (is_extraction_based = true). Puoi fare collegamenti del tipo: "Tra i caldi di oggi ci sono 3 numeri della decina del 40!", oppure "Il numero X oggi è caldo, riuscirà a spezzare il ritardo?", o parlare di numeri consecutivi tra i caldi/freddi. Sii creativo!
         
         Per ogni curiosità fornisci:
         - title: un titolo accattivante (max 4 parole) con un'emoji iniziale. Esempio: "🔥 I Super-Ritardatari"
