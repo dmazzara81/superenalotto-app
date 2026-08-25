@@ -380,106 +380,108 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
                                   style: TextStyle(color: Colors.white70, fontSize: 16),
                                 ),
                               )
-                            : Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Wrap(
-                                    alignment: WrapAlignment.center,
-                                    spacing: 12,
-                                    runSpacing: 16,
-                                    children: _currentSestina.map((num) {
-                                      return Container(
-                                        width: 50,
-                                        height: 50,
-                                        decoration: BoxDecoration(
-                                          shape: BoxShape.circle,
-                                          gradient: const LinearGradient(
-                                            colors: [Colors.white, Color(0xFFE0E0E0)],
-                                            begin: Alignment.topLeft,
-                                            end: Alignment.bottomRight,
-                                          ),
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: Colors.black.withOpacity(0.3),
-                                              blurRadius: 8,
-                                              offset: const Offset(0, 4),
-                                            )
-                                          ]
-                                        ),
-                                        child: Center(
-                                          child: Text(
-                                            num.toString(),
-                                            style: const TextStyle(
-                                              fontSize: 22,
-                                              fontWeight: FontWeight.w900,
-                                              color: Colors.black87,
-                                            ),
-                                          ),
-                                        ),
-                                      );
-                                    }).toList(),
-                                  ),
-                                  const SizedBox(height: 36),
-                                  if (_currentSuperStar != null)
-                                    Column(
-                                      children: [
-                                        const Text('SUPERSTAR', style: TextStyle(color: Colors.amber, fontWeight: FontWeight.w800, letterSpacing: 2.0)),
-                                        const SizedBox(height: 12),
-                                        Container(
-                                          width: 60,
-                                          height: 60,
+                            : SingleChildScrollView(
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Wrap(
+                                      alignment: WrapAlignment.center,
+                                      spacing: 12,
+                                      runSpacing: 16,
+                                      children: _currentSestina.map((num) {
+                                        return Container(
+                                          width: 50,
+                                          height: 50,
                                           decoration: BoxDecoration(
                                             shape: BoxShape.circle,
                                             gradient: const LinearGradient(
-                                              colors: [Colors.amberAccent, Colors.orange],
+                                              colors: [Colors.white, Color(0xFFE0E0E0)],
                                               begin: Alignment.topLeft,
                                               end: Alignment.bottomRight,
                                             ),
                                             boxShadow: [
                                               BoxShadow(
-                                                color: Colors.amber.withOpacity(0.6),
-                                                blurRadius: 20,
-                                                spreadRadius: 2,
+                                                color: Colors.black.withOpacity(0.3),
+                                                blurRadius: 8,
+                                                offset: const Offset(0, 4),
                                               )
                                             ]
                                           ),
                                           child: Center(
                                             child: Text(
-                                              _currentSuperStar.toString(),
+                                              num.toString(),
                                               style: const TextStyle(
-                                                fontSize: 26,
+                                                fontSize: 22,
                                                 fontWeight: FontWeight.w900,
-                                                color: Colors.black,
+                                                color: Colors.black87,
                                               ),
                                             ),
                                           ),
-                                        ),
-                                      ],
-                                    ),
-                                  const SizedBox(height: 24),
-                                  // Pulsante Salva
-                                  OutlinedButton.icon(
-                                    onPressed: () async {
-                                      HapticFeedback.lightImpact();
-                                      await SavedSestinasRepository.saveSestina(_currentSestina, _currentSuperStar);
-                                      if (mounted) {
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          const SnackBar(
-                                            content: Text('Schedina salvata con successo! 💾'),
-                                            backgroundColor: Colors.green,
-                                            duration: Duration(seconds: 2),
-                                          )
                                         );
-                                      }
-                                    },
-                                    icon: const Icon(Icons.save, color: Colors.white),
-                                    label: const Text('SALVA SCHEDINA', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                                    style: OutlinedButton.styleFrom(
-                                      side: const BorderSide(color: Colors.white54),
-                                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                                      }).toList(),
                                     ),
-                                  ),
-                                ],
+                                    const SizedBox(height: 36),
+                                    if (_currentSuperStar != null)
+                                      Column(
+                                        children: [
+                                          const Text('SUPERSTAR', style: TextStyle(color: Colors.amber, fontWeight: FontWeight.w800, letterSpacing: 2.0)),
+                                          const SizedBox(height: 12),
+                                          Container(
+                                            width: 60,
+                                            height: 60,
+                                            decoration: BoxDecoration(
+                                              shape: BoxShape.circle,
+                                              gradient: const LinearGradient(
+                                                colors: [Colors.amberAccent, Colors.orange],
+                                                begin: Alignment.topLeft,
+                                                end: Alignment.bottomRight,
+                                              ),
+                                              boxShadow: [
+                                                BoxShadow(
+                                                  color: Colors.amber.withOpacity(0.6),
+                                                  blurRadius: 20,
+                                                  spreadRadius: 2,
+                                                )
+                                              ]
+                                            ),
+                                            child: Center(
+                                              child: Text(
+                                                _currentSuperStar.toString(),
+                                                style: const TextStyle(
+                                                  fontSize: 26,
+                                                  fontWeight: FontWeight.w900,
+                                                  color: Colors.black,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    const SizedBox(height: 24),
+                                    // Pulsante Salva
+                                    OutlinedButton.icon(
+                                      onPressed: () async {
+                                        HapticFeedback.lightImpact();
+                                        await SavedSestinasRepository.saveSestina(_currentSestina, _currentSuperStar);
+                                        if (mounted) {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            const SnackBar(
+                                              content: Text('Schedina salvata con successo! 💾'),
+                                              backgroundColor: Colors.green,
+                                              duration: Duration(seconds: 2),
+                                            )
+                                          );
+                                        }
+                                      },
+                                      icon: const Icon(Icons.save, color: Colors.white),
+                                      label: const Text('SALVA SCHEDINA', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                                      style: OutlinedButton.styleFrom(
+                                        side: const BorderSide(color: Colors.white54),
+                                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                   ),
                 ),

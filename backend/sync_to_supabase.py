@@ -67,6 +67,78 @@ def main():
     ss_cold_numbers = [int(idx + 1) for idx in ss_sorted_indices[:10]]
     ss_hot_numbers = [int(idx + 1) for idx in ss_sorted_indices[::-1][:10]]
     
+    # ---------------------------------------------------------
+    # CALCOLO STATISTICHE EXTRA DAL DATABASE SUPABASE
+    # ---------------------------------------------------------
+    print("[*] Recupero ultime estrazioni per statistiche extra...")
+    try:
+        # Preleviamo le ultime 1000 estrazioni per calcolare trend attuali e storici
+        history_res = supabase.table("extractions").select("n1, n2, n3, n4, n5, n6, date").order("date", ascending=False).limit(1500).execute()
+        storico = history_res.data
+        
+        # 1. Ritardi Attuali (Da quante estrazioni non esce un numero)
+        delays = {str(i): 1500 for i in range(1, 91)} # Default 1500
+        for num in range(1, 91):
+            for i, row in enumerate(storico):
+                estrazione = [row['n1'], row['n2'], row['n3'], row['n4'], row['n5'], row['n6']]
+                if num in estrazione:
+                    delays[str(num)] = i
+                    break
+                    
+        # I 10 numeri più ritardatari in assoluto (Top 10 delays)
+        top_delayed = sorted(delays.items(), key=lambda x: x[1], reverse=True)[:10]
+        top_delayed_dict = {item[0]: item[1] for item in top_delayed}
+        
+        # 2. Pari vs Dispari Ratio
+        total_pari = 0
+        total_dispari = 0
+        for row in storico:
+            estrazione = [row['n1'], row['n2'], row['n3'], row['n4'], row['n5'], row['n6']]
+            for n in estrazione:
+                if n % 2 == 0:
+                    total_pari += 1
+                else:
+                    total_dispari += 1
+        total_numeri = total_pari + total_dispari
+        odd_even_ratio = {
+            "pari": round((total_pari / total_numeri) * 100, 1) if total_numeri > 0 else 50.0,
+            "dispari": round((total_dispari / total_numeri) * 100, 1) if total_numeri > 0 else 50.0
+        }
+        
+        # 3. Decine più frequenti (ultime 1500)
+        decades_count = {f"{d}0-{d}9": 0 for d in range(0, 9)}
+        for row in storico:
+            estrazione = [row['n1'], row['n2'], row['n3'], row['n4'], row['n5'], row['n6']]
+            for n in estrazione:
+                dec = (n // 10)
+                if dec == 9: dec = 8 # Il 90 va nella decina 80-90
+                decades_count[f"{dec}0-{dec}9"] += 1
+        
+        # 4. Ambi e Terni più frequenti (semplificato)
+        from collections import Counter
+        import itertools
+        ambi_counter = Counter()
+        terni_counter = Counter()
+        for row in storico:
+            estrazione = sorted([row['n1'], row['n2'], row['n3'], row['n4'], row['n5'], row['n6']])
+            for ambo in itertools.combinations(estrazione, 2):
+                ambi_counter[f"{ambo[0]}-{ambo[1]}"] += 1
+            for terno in itertools.combinations(estrazione, 3):
+                terni_counter[f"{terno[0]}-{terno[1]}-{terno[2]}"] += 1
+                
+        top_ambi = {k: v for k, v in ambi_counter.most_common(5)}
+        top_terni = {k: v for k, v in terni_counter.most_common(5)}
+        
+    except Exception as e:
+        print(f"[!] Errore nel calcolo delle stats extra: {e}")
+        top_delayed_dict = {}
+        odd_even_ratio = {"pari": 50.0, "dispari": 50.0}
+        decades_count = {}
+        top_ambi = {}
+        top_terni = {}
+    # ---------------------------------------------------------
+
+    
     # Formattiamo le probabilità dei modelli singoli
     individual_models_formatted = {}
     for model_name, probs in individual_probs.items():
@@ -82,7 +154,12 @@ def main():
         "superstar_probabilities": ss_probabilities_dict,
         "superstar_hot": ss_hot_numbers,
         "superstar_cold": ss_cold_numbers,
-        "individual_models": individual_models_formatted
+        "individual_models": individual_models_formatted,
+        "delays": top_delayed_dict,
+        "odd_even_ratio": odd_even_ratio,
+        "frequent_decades": decades_count,
+        "frequent_pairs": top_ambi,
+        "frequent_triplets": top_terni
     }
 
     # 4. Inserimento (Upsert) nel Cloud

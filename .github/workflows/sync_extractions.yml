@@ -22,7 +22,12 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install beautifulsoup4 supabase
+          pip install beautifulsoup4 supabase numpy google-genai
 
       - name: Run Fetch Extractions Script
         run: python backend/auto_fetch_extractions.py
+
+      - name: Run AI Generation & Supabase Sync
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: python backend/sync_to_supabase.py

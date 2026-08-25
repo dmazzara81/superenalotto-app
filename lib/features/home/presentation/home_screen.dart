@@ -53,7 +53,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _fetchCuriosities() async {
     try {
-      // Preleviamo 5 general e 5 extraction-based
       final res = await Supabase.instance.client
           .from('daily_curiosities')
           .select()
@@ -62,7 +61,6 @@ class _HomeScreenState extends State<HomeScreen> {
       
       List<Map<String, dynamic>> fetched = [];
       for (var item in res) {
-        // Conversione colore hex
         String hexColor = item['color_hex'] ?? '#448AFF';
         hexColor = hexColor.replaceAll('#', '');
         if (hexColor.length == 6) hexColor = 'FF$hexColor';
@@ -72,18 +70,48 @@ class _HomeScreenState extends State<HomeScreen> {
           'title': item['title'] ?? 'Curiosità',
           'description': item['description'] ?? '',
           'color': color,
-          'icon': Icons.auto_awesome, // Fallback sicuro
+          'icon': Icons.auto_awesome,
         });
       }
       
       if (mounted) {
         setState(() {
           fetched.shuffle();
-          _currentStats = fetched.take(10).toList();
+          if (fetched.isEmpty) {
+            // Fallback se il database è vuoto
+            _currentStats = [
+              {
+                'title': '⏳ In Attesa',
+                'description': 'Le curiosità di oggi stanno per essere generate dall\'IA. Torna più tardi!',
+                'color': Colors.blueGrey,
+                'icon': Icons.hourglass_empty
+              },
+              {
+                'title': '🔮 Previsioni',
+                'description': 'Il motore Quantico sta elaborando le nuove estrazioni...',
+                'color': Colors.amber,
+                'icon': Icons.psychology
+              }
+            ];
+          } else {
+            _currentStats = fetched.take(10).toList();
+          }
         });
       }
     } catch (e) {
       debugPrint("Errore fetch curiosities: $e");
+      if (mounted) {
+        setState(() {
+          _currentStats = [
+            {
+              'title': '⚠️ Errore Rete',
+              'description': 'Non è stato possibile caricare le curiosità.',
+              'color': Colors.redAccent,
+              'icon': Icons.error_outline
+            }
+          ];
+        });
+      }
     }
   }
 
@@ -360,9 +388,15 @@ class _HomeScreenState extends State<HomeScreen> {
                                         const Icon(Icons.monetization_on, color: Colors.amber, size: 24),
                                         const SizedBox(width: 8),
                                         const Text('JACKPOT IN PALIO: ', style: TextStyle(color: Colors.white70, fontSize: 14)),
-                                        Text(
-                                          _latestExtraction!.jackpot!,
-                                          style: const TextStyle(color: Colors.amber, fontWeight: FontWeight.bold, fontSize: 20),
+                                        Expanded(
+                                          child: FittedBox(
+                                            fit: BoxFit.scaleDown,
+                                            alignment: Alignment.centerLeft,
+                                            child: Text(
+                                              _latestExtraction!.jackpot!,
+                                              style: const TextStyle(color: Colors.amber, fontWeight: FontWeight.bold, fontSize: 20),
+                                            ),
+                                          ),
                                         ),
                                       ],
                                     ),
