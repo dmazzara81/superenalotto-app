@@ -164,6 +164,14 @@ class _HomeScreenState extends State<HomeScreen> {
     return '$days$hours:$minutes:$seconds';
   }
 
+  Future<void> _refreshAll() async {
+    await Future.wait([
+      _fetchCuriosities(),
+      _fetchExtraction(),
+      _fetchGlobalStats(),
+    ]);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -179,12 +187,16 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
         child: SafeArea(
-          child: SingleChildScrollView(
-            physics: const BouncingScrollPhysics(),
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
+          child: RefreshIndicator(
+            onRefresh: _refreshAll,
+            color: Colors.amber,
+            backgroundColor: const Color(0xFF1E1E2C),
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
                 const SizedBox(height: 20),
                 // Hero Section
                 Text(
