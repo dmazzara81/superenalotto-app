@@ -83,15 +83,22 @@ def fetch_latest_extractions():
         superstar_match = re.search(r'(\d+)', num_tags[7].get_text(strip=True))
         superstar = int(superstar_match.group(1)) if superstar_match else 0
         
-        # Recupero del Jackpot
+        # Recupero del PROSSIMO Jackpot (quello in palio) dalla barra in alto della pagina
         jackpot_str = "0 €"
-        footer_cell2 = box.find('div', class_='boxDrawFooterCell2')
-        if footer_cell2:
-            raw_text = footer_cell2.get_text(strip=True)
-            # Estraiamo solo numeri e puntini per evitare problemi di codifica con il simbolo Euro
+        top_jackpot_div = soup.find('div', class_='topBarJackpotValueNumber')
+        if top_jackpot_div:
+            raw_text = top_jackpot_div.get_text(strip=True)
             match_jackpot = re.search(r'([\d\.]+)', raw_text)
             if match_jackpot:
                 jackpot_str = match_jackpot.group(1) + " €"
+        else:
+            # Fallback al montepremi dell'estrazione se non trova il prossimo
+            footer_cell2 = box.find('div', class_='boxDrawFooterCell2')
+            if footer_cell2:
+                raw_text = footer_cell2.get_text(strip=True)
+                match_jackpot = re.search(r'([\d\.]+)', raw_text)
+                if match_jackpot:
+                    jackpot_str = match_jackpot.group(1) + " €"
         
         draws.append({
             "concorso": concorso,
