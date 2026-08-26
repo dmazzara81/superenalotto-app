@@ -56,8 +56,7 @@ def generate_and_save_curiosities(hot_numbers: list, cold_numbers: list, target_
             },
         )
         
-        parsed_data = json.loads(response.text)
-        curiosities_list = parsed_data.get("curiosities", [])
+        curiosities_list = response.parsed.curiosities if response.parsed else []
         
         print(f"[*] Gemini ha generato {len(curiosities_list)} curiosità.")
         
@@ -65,12 +64,12 @@ def generate_and_save_curiosities(hot_numbers: list, cold_numbers: list, target_
         records = []
         for c in curiosities_list:
             records.append({
-                "title": c["title"],
-                "description": c["description"],
-                "icon_name": c["icon_name"],
-                "color_hex": c["color_hex"],
-                "is_extraction_based": c["is_extraction_based"],
-                "target_date": target_date if c["is_extraction_based"] else None
+                "title": c.title,
+                "description": c.description,
+                "icon_name": c.icon_name,
+                "color_hex": c.color_hex,
+                "is_extraction_based": c.is_extraction_based,
+                "target_date": target_date if c.is_extraction_based else None
             })
             
         if records:
@@ -79,3 +78,4 @@ def generate_and_save_curiosities(hot_numbers: list, cold_numbers: list, target_
             
     except Exception as e:
         print(f"[ERROR] Errore durante la generazione delle curiosità: {e}")
+        raise e

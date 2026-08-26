@@ -72,8 +72,7 @@ def main():
     # ---------------------------------------------------------
     print("[*] Recupero ultime estrazioni per statistiche extra...")
     try:
-        # Preleviamo le ultime 1000 estrazioni per calcolare trend attuali e storici
-        history_res = supabase.table("extractions").select("n1, n2, n3, n4, n5, n6, date").order("date", ascending=False).limit(1500).execute()
+        history_res = supabase.table("historical_extractions").select("n1, n2, n3, n4, n5, n6, date").order("date", desc=True).limit(1500).execute()
         storico = history_res.data
         
         # 1. Ritardi Attuali (Da quante estrazioni non esce un numero)
@@ -177,6 +176,7 @@ def main():
         
     except Exception as e:
         print(f"[ERROR] Impossibile salvare su Supabase: {str(e)}")
+        raise e
 
 if __name__ == "__main__":
     main()
