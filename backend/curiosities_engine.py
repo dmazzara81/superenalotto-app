@@ -61,8 +61,16 @@ def generate_and_save_curiosities(hot_numbers: list, cold_numbers: list, target_
                 'temperature': 0.7
             },
         )
+        raw_text = response.text.strip()
+        if raw_text.startswith("```json"):
+            raw_text = raw_text.split("```json", 1)[1]
+        if raw_text.endswith("```"):
+            raw_text = raw_text.rsplit("```", 1)[0]
+            
+        parsed_data = json.loads(raw_text.strip())
         
-        curiosities_list = response.parsed.curiosities if response.parsed else []
+        # Pydantic parsing can return dicts directly when parsed this way
+        curiosities_list = parsed_data.get("curiosities", [])
         
         print(f"[*] Gemini ha generato {len(curiosities_list)} curiosità.")
         
@@ -70,12 +78,12 @@ def generate_and_save_curiosities(hot_numbers: list, cold_numbers: list, target_
         records = []
         for c in curiosities_list:
             records.append({
-                "title": c.title,
-                "description": c.description,
-                "icon_name": c.icon_name,
-                "color_hex": c.color_hex,
-                "is_extraction_based": c.is_extraction_based,
-                "target_date": target_date if c.is_extraction_based else None
+                "title": c.get("title", ""),
+                "description": c.get("description", ""),
+                "icon_name": c.get("icon_name", "star"),
+                "color_hex": c.get("color_hex", "#FFFFFF"),
+                "is_extraction_based": c.get("is_extraction_based", False),
+                "target_date": target_date if c.get("is_extraction_based", False) else None
             })
             
         if records:
