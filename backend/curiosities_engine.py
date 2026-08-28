@@ -53,7 +53,7 @@ def generate_and_save_curiosities(hot_numbers: list, cold_numbers: list, target_
         
         print("[*] Chiamata a Gemini in corso...")
         response = client.models.generate_content(
-            model='gemini-2.0-flash',
+            model='gemini-3.6-flash',
             contents=prompt,
             config={
                 'response_mime_type': 'application/json',
