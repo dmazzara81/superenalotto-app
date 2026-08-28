@@ -7,6 +7,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:superenalotto/features/premium_analytics/data/saved_sestinas_repository.dart';
 import 'package:superenalotto/features/premium_analytics/presentation/saved_sestinas_screen.dart';
 import 'package:superenalotto/core/services/tracking_service.dart';
+import 'package:superenalotto/core/services/revenuecat_service.dart';
+import 'package:superenalotto/features/paywall/presentation/paywall_screen.dart';
 
 class AnalyticsDashboardScreen extends StatefulWidget {
   const AnalyticsDashboardScreen({super.key});
@@ -36,11 +38,20 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
   String _selectedModel = 'Ensemble (Consigliato)';
   
   Map<int, double>? _cachedProbabilities;
+  bool _isPro = false;
 
   @override
   void initState() {
     super.initState();
+    _checkProStatus();
     _preloadProbabilities();
+  }
+
+  Future<void> _checkProStatus() async {
+    final isPro = await RevenueCatService().isProUser();
+    if (mounted) {
+      setState(() => _isPro = isPro);
+    }
   }
 
   Future<void> _preloadProbabilities() async {
@@ -69,6 +80,15 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
   /// Estrae 6 numeri + 1 SuperStar basandosi sui pesi scaricati dal cloud
   /// Permette l'inserimento di numeri fissi (versione Ibrida)
   Future<void> _generateProSestina({Set<int>? lockedNumbers, int? lockedSuperStar}) async {
+    if (!_isPro) {
+      final result = await Navigator.push(context, MaterialPageRoute(builder: (_) => const PaywallScreen()));
+      if (result == true) {
+        _checkProStatus();
+        _generateProSestina(lockedNumbers: lockedNumbers, lockedSuperStar: lockedSuperStar);
+      }
+      return;
+    }
+    
     HapticFeedback.heavyImpact();
     setState(() {
       _isGenerating = true;
@@ -197,7 +217,16 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
     );
   }
 
-  void _openHybridGeneratorBottomSheet() {
+  void _openHybridGeneratorBottomSheet() async {
+    if (!_isPro) {
+      final result = await Navigator.push(context, MaterialPageRoute(builder: (_) => const PaywallScreen()));
+      if (result == true) {
+        _checkProStatus();
+        _openHybridGeneratorBottomSheet();
+      }
+      return;
+    }
+    
     HapticFeedback.lightImpact();
     showModalBottomSheet(
       context: context,

@@ -4,6 +4,8 @@ import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:superenalotto/core/utils/combinatorics.dart';
 import 'package:superenalotto/features/systems/domain/system_engine.dart';
+import 'package:superenalotto/core/services/revenuecat_service.dart';
+import 'package:superenalotto/features/paywall/presentation/paywall_screen.dart';
 import 'system_result_screen.dart';
 
 class SystemsHubScreen extends StatefulWidget {
@@ -26,9 +28,36 @@ class _SystemsHubScreenState extends State<SystemsHubScreen> {
   
   int? _selectedSuperstar;
   bool _isLoading = false;
+  bool _isPro = false;
 
-  void _onTypeChanged(SystemType? val) {
+  @override
+  void initState() {
+    super.initState();
+    _checkProStatus();
+  }
+
+  Future<void> _checkProStatus() async {
+    final isPro = await RevenueCatService().isProUser();
+    if (mounted) {
+      setState(() => _isPro = isPro);
+    }
+  }
+
+  void _onTypeChanged(SystemType? val) async {
     if (val == null) return;
+    
+    if (!_isPro && (val == SystemType.basiVarianti || val == SystemType.cruciverba)) {
+      final result = await Navigator.push(context, MaterialPageRoute(builder: (_) => const PaywallScreen()));
+      if (result == true) {
+        _checkProStatus();
+        _applyTypeChange(val);
+      }
+      return;
+    }
+    _applyTypeChange(val);
+  }
+  
+  void _applyTypeChange(SystemType val) {
     setState(() {
       _systemType = val;
       _selectedNumbers.clear();
@@ -53,6 +82,15 @@ class _SystemsHubScreenState extends State<SystemsHubScreen> {
   }
 
   Future<void> _autoFillWithAI() async {
+    if (!_isPro) {
+      final result = await Navigator.push(context, MaterialPageRoute(builder: (_) => const PaywallScreen()));
+      if (result == true) {
+        _checkProStatus();
+        _autoFillWithAI(); // Ritenta dopo acquisto
+      }
+      return;
+    }
+    
     HapticFeedback.heavyImpact();
     setState(() {
       _isLoading = true;

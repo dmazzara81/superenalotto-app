@@ -4,6 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:superenalotto/core/services/historical_data_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'package:superenalotto/core/services/revenuecat_service.dart';
+import 'package:superenalotto/features/paywall/presentation/paywall_screen.dart';
+
 class HomeScreen extends StatefulWidget {
   final Function(int) onNavigate; // Callback per navigare ad altri tab
   
@@ -22,6 +25,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Map<String, dynamic>? _globalWinStats;
   
   List<Map<String, dynamic>> _currentStats = [];
+  bool _isPro = false;
 
   @override
   void initState() {
@@ -30,9 +34,17 @@ class _HomeScreenState extends State<HomeScreen> {
     _calculateNextDraw();
     _fetchExtraction();
     _fetchGlobalStats();
+    _checkProStatus();
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       _calculateNextDraw();
     });
+  }
+
+  Future<void> _checkProStatus() async {
+    final isPro = await RevenueCatService().isProUser();
+    if (mounted) {
+      setState(() => _isPro = isPro);
+    }
   }
 
   Future<void> _fetchGlobalStats() async {
@@ -199,13 +211,41 @@ class _HomeScreenState extends State<HomeScreen> {
                 children: [
                 const SizedBox(height: 20),
                 // Hero Section
-                Text(
-                  'Bentornato!',
-                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Bentornato!',
+                        style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
                       ),
-                ),
+                      if (!_isPro)
+                        GestureDetector(
+                          onTap: () async {
+                            final result = await Navigator.push(context, MaterialPageRoute(builder: (_) => const PaywallScreen()));
+                            if (result == true) {
+                              _checkProStatus();
+                            }
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(colors: [Colors.amber, Colors.orange]),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: const Row(
+                              children: [
+                                Icon(Icons.star, color: Colors.black, size: 16),
+                                SizedBox(width: 4),
+                                Text('PRO', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+                              ],
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
                 const SizedBox(height: 8),
                 Text(
                   'Sei pronto per la prossima estrazione?',
@@ -484,7 +524,16 @@ class _HomeScreenState extends State<HomeScreen> {
                         icon: Icons.psychology,
                         color: Colors.amber,
                         isPro: true,
-                        onTap: () => widget.onNavigate(2), // Tab Analytics
+                        onTap: () async {
+                          if (!_isPro) {
+                            final result = await Navigator.push(context, MaterialPageRoute(builder: (_) => const PaywallScreen()));
+                            if (result == true) {
+                              _checkProStatus();
+                            }
+                            return;
+                          }
+                          widget.onNavigate(2); // Tab Analytics
+                        },
                       ),
                     ),
                   ],

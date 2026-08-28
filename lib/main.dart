@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:superenalotto/core/routing/app_router.dart';
 import 'package:superenalotto/core/theme/app_theme.dart';
+import 'package:superenalotto/core/services/revenuecat_service.dart';
 
 // Inserite le vere chiavi del progetto Supabase
 const String supabaseUrl = 'https://fcokqyuccicfxqxughih.supabase.co';
@@ -16,6 +17,9 @@ void main() async {
     url: supabaseUrl,
     anonKey: supabaseAnonKey,
   );
+  
+  // Inizializzazione RevenueCat
+  await RevenueCatService().init();
 
   runApp(
     const ProviderScope(
