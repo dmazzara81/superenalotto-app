@@ -2,9 +2,12 @@ name: SuperEnalotto Auto-Sync
 
 on:
   schedule:
-    # Esegue il workflow OGNI GIORNO alle 18:45 UTC (19:45 o 20:45 in Italia)
-    # Eseguirlo tutti i giorni ci protegge dai cambi di data per festività
-    - cron: '45 18 * * *'
+    # Controlli multipli la sera per intercettare l'estrazione appena esce.
+    # Orari UTC: 19:30, 20:00, 20:30, 21:00 (corrispondono a 21:30, 22:00, 22:30, 23:00 in Italia)
+    - cron: '30 19 * * *'
+    - cron: '0 20 * * *'
+    - cron: '30 20 * * *'
+    - cron: '0 21 * * *'
   workflow_dispatch: # Permette di avviare il workflow manualmente dal sito di GitHub
 
 jobs:

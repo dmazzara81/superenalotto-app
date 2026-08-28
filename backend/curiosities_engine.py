@@ -23,8 +23,14 @@ def generate_and_save_curiosities(hot_numbers: list, cold_numbers: list, target_
     if not api_key:
         print("[!] GEMINI_API_KEY non trovata. Impossibile generare curiosità.")
         return
-    
+        
     try:
+        # Check if already generated for today
+        existing = supabase_client.table("daily_curiosities").select("id").eq("target_date", target_date).execute()
+        if existing.data and len(existing.data) > 0:
+            print(f"[*] Curiosità già presenti per {target_date}. Salto la generazione Gemini per risparmiare API.")
+            return
+            
         client = genai.Client(api_key=api_key)
         
         prompt = f"""
