@@ -22,20 +22,15 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
   int? _currentSuperStar;
   bool _isGenerating = false;
   String _errorMessage = '';
-  
-  final List<String> _availableModels = [
-    'Ensemble (Consigliato)',
-    'Markov_Chains',
-    'Bayesian_Filters',
-    'LSTM_Neural_Networks',
-    'Genetic_Algorithms',
-    'ARIMA_Time_Series',
-    'Monte_Carlo_Simulations',
-    'Random_Forest',
-    'Hidden_Markov_Models',
-    'Transformer_Attention'
+  final List<String> _loadingTexts = [
+    'Caricamento pesi quantistici...',
+    'Addestramento Reti Neurali...',
+    'Analisi Catene di Markov...',
+    'Simulazione Monte Carlo...',
+    'Filtri Bayesiani in esecuzione...',
+    'Estrazione Sestina Ottimale...',
   ];
-  String _selectedModel = 'Ensemble (Consigliato)';
+  int _loadingStep = 0;
   
   Map<int, double>? _cachedProbabilities;
   bool _isPro = false;
@@ -88,14 +83,20 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
       }
       return;
     }
-    
     HapticFeedback.heavyImpact();
     setState(() {
       _isGenerating = true;
+      _loadingStep = 0;
       _errorMessage = '';
       _currentSestina = [];
       _currentSuperStar = null;
     });
+
+    // Faux loading animation
+    for (int i = 0; i < 5; i++) {
+      await Future.delayed(const Duration(milliseconds: 600));
+      if (mounted) setState(() => _loadingStep = i + 1);
+    }
 
     try {
       final response = await Supabase.instance.client
@@ -109,15 +110,8 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
       final Map<String, dynamic>? rawSuperstarConsensus = response['superstar_probabilities'];
       final Map<String, dynamic>? individualModels = response['individual_models'];
       final String targetDate = response['target_date'] ?? '';
-      
       Map<int, double> consensusVector = {};
       Map<String, dynamic> sourceProbabilities = rawConsensus;
-      
-      if (_selectedModel != 'Ensemble (Consigliato)' && individualModels != null) {
-        if (individualModels.containsKey(_selectedModel)) {
-          sourceProbabilities = individualModels[_selectedModel];
-        }
-      }
       
       sourceProbabilities.forEach((key, value) {
         consensusVector[int.parse(key)] = (value as num).toDouble();
@@ -309,6 +303,11 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
         backgroundColor: Theme.of(context).primaryColor,
         actions: [
           IconButton(
+            icon: const Icon(Icons.thermostat, color: Colors.cyanAccent),
+            tooltip: 'Termometro Sestina',
+            onPressed: _openTermometroBottomSheet,
+          ),
+          IconButton(
             icon: const Icon(Icons.receipt_long, color: Colors.amber),
             tooltip: 'Le Mie Schedine',
             onPressed: () {
@@ -325,48 +324,7 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Card Introduttiva
-            Card(
-              elevation: 8,
-              shadowColor: Theme.of(context).primaryColor.withOpacity(0.5),
-              child: Padding(
-                padding: const EdgeInsets.all(20.0),
-                child: Column(
-                  children: [
-                    const Icon(Icons.psychology, size: 48, color: Colors.amber),
-                    const SizedBox(height: 12),
-                    Text(
-                      'Generatore Quantico',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            color: Colors.amber,
-                            fontWeight: FontWeight.bold,
-                          ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Scarica i pesi dinamici aggiornati dal Cloud (Supabase).',
-                      textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.bodyMedium,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 24),
-
-            // Termometro Sestina (Pulsante secondario)
-            OutlinedButton.icon(
-              onPressed: _openTermometroBottomSheet,
-              icon: const Icon(Icons.thermostat, color: Colors.cyanAccent),
-              label: const Text('Analizza la tua Schedina', style: TextStyle(color: Colors.cyanAccent)),
-              style: OutlinedButton.styleFrom(
-                side: const BorderSide(color: Colors.cyanAccent),
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-              ),
-            ),
-
-            const SizedBox(height: 16),
+            const SizedBox(height: 8),
 
             // Messaggio di Errore
             if (_errorMessage.isNotEmpty)
@@ -400,7 +358,24 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
                       ]
                     ),
                     child: _isGenerating
-                        ? const Center(child: CircularProgressIndicator(color: Colors.amber))
+                        ? Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const CircularProgressIndicator(color: Colors.amber),
+                                const SizedBox(height: 24),
+                                AnimatedSwitcher(
+                                  duration: const Duration(milliseconds: 300),
+                                  child: Text(
+                                    _loadingTexts[_loadingStep % _loadingTexts.length],
+                                    key: ValueKey<int>(_loadingStep),
+                                    style: const TextStyle(color: Colors.amber, fontWeight: FontWeight.bold, fontSize: 16),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )
                         : _currentSestina.isEmpty
                             ? const Center(
                                 child: Text(
@@ -415,12 +390,12 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
                                   children: [
                                     Wrap(
                                       alignment: WrapAlignment.center,
-                                      spacing: 12,
-                                      runSpacing: 16,
+                                      spacing: 8,
+                                      runSpacing: 12,
                                       children: _currentSestina.map((num) {
                                         return Container(
-                                          width: 50,
-                                          height: 50,
+                                          width: 44,
+                                          height: 44,
                                           decoration: BoxDecoration(
                                             shape: BoxShape.circle,
                                             gradient: const LinearGradient(
@@ -440,7 +415,7 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
                                             child: Text(
                                               num.toString(),
                                               style: const TextStyle(
-                                                fontSize: 22,
+                                                fontSize: 18,
                                                 fontWeight: FontWeight.w900,
                                                 color: Colors.black87,
                                               ),
@@ -449,15 +424,15 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
                                         );
                                       }).toList(),
                                     ),
-                                    const SizedBox(height: 36),
+                                    const SizedBox(height: 24),
                                     if (_currentSuperStar != null)
                                       Column(
                                         children: [
                                           const Text('SUPERSTAR', style: TextStyle(color: Colors.amber, fontWeight: FontWeight.w800, letterSpacing: 2.0)),
-                                          const SizedBox(height: 12),
+                                          const SizedBox(height: 8),
                                           Container(
-                                            width: 60,
-                                            height: 60,
+                                            width: 50,
+                                            height: 50,
                                             decoration: BoxDecoration(
                                               shape: BoxShape.circle,
                                               gradient: const LinearGradient(
@@ -477,7 +452,7 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
                                               child: Text(
                                                 _currentSuperStar.toString(),
                                                 style: const TextStyle(
-                                                  fontSize: 26,
+                                                  fontSize: 20,
                                                   fontWeight: FontWeight.w900,
                                                   color: Colors.black,
                                                 ),
@@ -516,41 +491,8 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
                 ),
               ),
             ),
-            const SizedBox(height: 24),
-
-            // Selezione Modello IA
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.white24),
-              ),
-              child: DropdownButtonHideUnderline(
-                child: DropdownButton<String>(
-                  value: _selectedModel,
-                  isExpanded: true,
-                  dropdownColor: const Color(0xFF1A1A2E),
-                  icon: const Icon(Icons.arrow_drop_down, color: Colors.amber),
-                  style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
-                  onChanged: (String? newValue) {
-                    if (newValue != null) {
-                      setState(() {
-                        _selectedModel = newValue;
-                      });
-                    }
-                  },
-                  items: _availableModels.map<DropdownMenuItem<String>>((String value) {
-                    return DropdownMenuItem<String>(
-                      value: value,
-                      child: Text(value.replaceAll('_', ' ')),
-                    );
-                  }).toList(),
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-
+            // Selezione Modello IA - RIMOSSO per ottimizzazione UI
+            
             // Pulsanti Generazione
             Row(
               children: [
