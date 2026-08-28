@@ -105,13 +105,18 @@ def main():
         }
         
         # 3. Decine più frequenti (ultime 1500)
-        decades_count = {f"{d}0-{d}9": 0 for d in range(0, 9)}
+        def get_decade_label(d):
+            if d == 0: return "1-9"
+            if d == 8: return "80-90"
+            return f"{d}0-{d}9"
+
+        decades_count = {get_decade_label(d): 0 for d in range(0, 9)}
         for row in storico:
             estrazione = [row['n1'], row['n2'], row['n3'], row['n4'], row['n5'], row['n6']]
             for n in estrazione:
                 dec = (n // 10)
                 if dec == 9: dec = 8 # Il 90 va nella decina 80-90
-                decades_count[f"{dec}0-{dec}9"] += 1
+                decades_count[get_decade_label(dec)] += 1
         
         # 4. Ambi e Terni più frequenti (semplificato)
         from collections import Counter
