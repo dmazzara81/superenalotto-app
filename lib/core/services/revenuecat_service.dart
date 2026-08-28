@@ -12,38 +12,18 @@ class RevenueCatService {
   factory RevenueCatService() => _instance;
   RevenueCatService._internal();
 
-  /// Inizializza l'SDK di RevenueCat. Da chiamare in main.dart
+  /// Inizializzazione temporaneamente disabilitata per rendere tutto gratuito
   Future<void> init() async {
-    try {
-      await Purchases.setLogLevel(LogLevel.debug);
-      
-      late PurchasesConfiguration configuration;
-      
-      if (Platform.isAndroid) {
-        configuration = PurchasesConfiguration(_revenueCatApiKeyAndroid);
-      } else if (Platform.isIOS) {
-        configuration = PurchasesConfiguration(_revenueCatApiKeyIOS);
-      } else {
-        return; // RevenueCat non supportato su questa piattaforma
-      }
-      
-      await Purchases.configure(configuration);
-      debugPrint('[RevenueCat] Inizializzato con successo');
-    } catch (e) {
-      debugPrint('[RevenueCat] Errore inizializzazione: $e');
-    }
+    // try {
+    //   await Purchases.setLogLevel(LogLevel.debug);
+    //   ...
+    // } catch (e) { ... }
   }
 
   /// Verifica se l'utente ha un abbonamento PRO attivo
+  /// ATTUALMENTE: Ritorna sempre true per rendere l'app completamente gratuita
   Future<bool> isProUser() async {
-    try {
-      final customerInfo = await Purchases.getCustomerInfo();
-      // Assumiamo che l'entitlement su RevenueCat si chiami "pro_access"
-      return customerInfo.entitlements.all['pro_access']?.isActive ?? false;
-    } catch (e) {
-      debugPrint('[RevenueCat] Errore verifica PRO: $e');
-      return false;
-    }
+    return true;
   }
 
   /// Recupera le offerte (Packages) configurate su RevenueCat

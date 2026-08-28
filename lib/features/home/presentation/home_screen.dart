@@ -523,7 +523,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         title: 'IA Ensemble',
                         icon: Icons.psychology,
                         color: Colors.amber,
-                        isPro: true,
+                        isPro: false,
                         onTap: () async {
                           if (!_isPro) {
                             final result = await Navigator.push(context, MaterialPageRoute(builder: (_) => const PaywallScreen()));
