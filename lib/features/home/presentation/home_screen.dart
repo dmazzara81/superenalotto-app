@@ -435,7 +435,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 const SizedBox(height: 16),
                 SizedBox(
-                  height: 180,
+                  height: 220,
                   child: ListView.separated(
                     scrollDirection: Axis.horizontal,
                     physics: const BouncingScrollPhysics(),
@@ -644,7 +644,7 @@ class _HomeScreenState extends State<HomeScreen> {
               color: Colors.white70,
               height: 1.4,
             ),
-            maxLines: 3,
+            maxLines: 6,
             overflow: TextOverflow.ellipsis,
           ),
         ],

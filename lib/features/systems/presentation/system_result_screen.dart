@@ -7,23 +7,28 @@ import 'package:superenalotto/core/services/tracking_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter/foundation.dart';
 
-List<List<int>> _reduceSystemIsolate(Map<String, dynamic> args) {
-  final pool = args['pool'] as List<int>;
-  final guarantee = args['guarantee'] as SystemGuarantee;
-  return Combinatorics.reduceSystem(pool, guarantee);
+import 'package:superenalotto/features/systems/domain/system_engine.dart';
+
+List<List<int>> _generateSystemIsolate(Map<String, dynamic> args) {
+  return SystemEngine.generateSystem(args);
 }
 
-
 class SystemResultScreen extends StatefulWidget {
-  final List<int> pool;
+  final SystemType type;
+  final List<int>? pool;
+  final List<int>? basi;
+  final List<int>? varianti;
+  final SystemGuarantee? guarantee;
   final int? superstar;
-  final SystemGuarantee guarantee;
 
   const SystemResultScreen({
     super.key,
-    required this.pool,
+    required this.type,
+    this.pool,
+    this.basi,
+    this.varianti,
+    this.guarantee,
     required this.superstar,
-    required this.guarantee,
   });
 
   @override
@@ -43,20 +48,29 @@ class _SystemResultScreenState extends State<SystemResultScreen> {
   }
 
   void _setTitle() {
-    if (widget.guarantee == SystemGuarantee.integral) {
-      _systemTitle = 'Sistema Integrale - ${widget.pool.length} Numeri';
-    } else if (widget.guarantee == SystemGuarantee.g4) {
-      _systemTitle = 'Sistema Ridotto G4 - ${widget.pool.length} Numeri';
+    if (widget.type == SystemType.integral) {
+      _systemTitle = 'Sistema Integrale - ${widget.pool!.length} Numeri';
+    } else if (widget.type == SystemType.cruciverba) {
+      _systemTitle = 'Sistema Cruciverba - ${widget.pool!.length} Numeri';
+    } else if (widget.type == SystemType.basiVarianti) {
+      _systemTitle = 'Basi e Varianti - ${widget.basi!.length} Basi, ${widget.varianti!.length} Varianti';
     } else {
-      _systemTitle = 'Sistema Ridotto G3 - ${widget.pool.length} Numeri';
+      if (widget.guarantee == SystemGuarantee.g4) {
+        _systemTitle = 'Sistema Ridotto G4 - ${widget.pool!.length} Numeri';
+      } else {
+        _systemTitle = 'Sistema Ridotto G3 - ${widget.pool!.length} Numeri';
+      }
     }
   }
 
   Future<void> _generate() async {
     // Usa un isolate per non bloccare la UI durante calcoli intensivi
-    final result = await compute(_reduceSystemIsolate, {
-      'pool': widget.pool,
+    final result = await compute(_generateSystemIsolate, {
+      'type': widget.type,
+      'pool': widget.pool ?? [],
       'guarantee': widget.guarantee,
+      'basi': widget.basi ?? [],
+      'varianti': widget.varianti ?? [],
     });
     
     if (mounted) {
@@ -153,7 +167,7 @@ class _SystemResultScreenState extends State<SystemResultScreen> {
                       Wrap(
                         spacing: 8,
                         runSpacing: 8,
-                        children: widget.pool.map((num) {
+                        children: (widget.pool ?? (widget.basi ?? []) + (widget.varianti ?? [])).map((n) {
                           return Container(
                             width: 32,
                             height: 32,
@@ -163,7 +177,7 @@ class _SystemResultScreenState extends State<SystemResultScreen> {
                             ),
                             child: Center(
                               child: Text(
-                                num.toString(),
+                                n.toString(),
                                 style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
                               ),
                             ),

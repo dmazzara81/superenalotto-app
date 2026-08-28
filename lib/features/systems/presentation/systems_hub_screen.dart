@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:superenalotto/core/utils/combinatorics.dart';
+import 'package:superenalotto/features/systems/domain/system_engine.dart';
 import 'system_result_screen.dart';
 
 class SystemsHubScreen extends StatefulWidget {
@@ -13,27 +14,41 @@ class SystemsHubScreen extends StatefulWidget {
 }
 
 class _SystemsHubScreenState extends State<SystemsHubScreen> {
-  SystemGuarantee _guarantee = SystemGuarantee.integral;
-  int _targetNumbers = 7; // da 7 a 15 dipendendo dal tipo
+  SystemType _systemType = SystemType.integral;
+  SystemGuarantee _guarantee = SystemGuarantee.g3;
+  
+  int _targetNumbers = 7; 
   Set<int> _selectedNumbers = {};
+  
+  // Basi e Varianti
+  Set<int> _basiNumbers = {};
+  Set<int> _variantiNumbers = {};
+  
   int? _selectedSuperstar;
   bool _isLoading = false;
 
+  void _onTypeChanged(SystemType? val) {
+    if (val == null) return;
+    setState(() {
+      _systemType = val;
+      _selectedNumbers.clear();
+      _basiNumbers.clear();
+      _variantiNumbers.clear();
+      
+      if (_systemType == SystemType.integral) {
+        _targetNumbers = 7;
+      } else if (_systemType == SystemType.reduced) {
+        _targetNumbers = 10;
+      } else if (_systemType == SystemType.cruciverba) {
+        _targetNumbers = 36;
+      }
+    });
+  }
+  
   void _onGuaranteeChanged(SystemGuarantee? val) {
     if (val == null) return;
     setState(() {
       _guarantee = val;
-      // Adjust target numbers based on guarantee limits
-      if (_guarantee == SystemGuarantee.integral && _targetNumbers > 10) {
-        _targetNumbers = 10;
-      }
-      if (_guarantee != SystemGuarantee.integral && _targetNumbers < 9) {
-        _targetNumbers = 9;
-      }
-      // Trim selected numbers if they exceed the new target
-      if (_selectedNumbers.length > _targetNumbers) {
-        _selectedNumbers = _selectedNumbers.take(_targetNumbers).toSet();
-      }
     });
   }
 
@@ -57,12 +72,23 @@ class _SystemsHubScreenState extends State<SystemsHubScreen> {
         consensusVector[int.parse(key)] = (value as num).toDouble();
       });
 
-      // Sort by highest probability
       List<int> sortedNumbers = consensusVector.keys.toList()
         ..sort((a, b) => consensusVector[b]!.compareTo(consensusVector[a]!));
-
-      // Pick top _targetNumbers
-      Set<int> newSelection = sortedNumbers.take(_targetNumbers).toSet();
+        
+      if (_systemType == SystemType.basiVarianti) {
+          List<int> hotPool = sortedNumbers.take(15).toList();
+          hotPool.shuffle();
+          _basiNumbers = hotPool.take(2).toSet();
+          _variantiNumbers = hotPool.skip(2).take(8).toSet();
+      } else if (_systemType == SystemType.cruciverba) {
+          List<int> hotPool = sortedNumbers.take(45).toList();
+          hotPool.shuffle();
+          _selectedNumbers = hotPool.take(36).toSet();
+      } else {
+          List<int> hotPool = sortedNumbers.take(30).toList();
+          hotPool.shuffle();
+          _selectedNumbers = hotPool.take(_targetNumbers).toSet();
+      }
       
       // Auto-pick SuperStar
       int ss = _selectedSuperstar ?? 1;
@@ -74,16 +100,17 @@ class _SystemsHubScreenState extends State<SystemsHubScreen> {
         });
         List<int> sortedSS = ssVector.keys.toList()
           ..sort((a, b) => ssVector[b]!.compareTo(ssVector[a]!));
-        ss = sortedSS.first;
+        List<int> hotSSPool = sortedSS.take(10).toList();
+        hotSSPool.shuffle();
+        ss = hotSSPool.first;
       }
 
       setState(() {
-        _selectedNumbers = newSelection;
         _selectedSuperstar = ss;
       });
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Errore AI: $e'), backgroundColor: Colors.red),
+        SnackBar(content: Text('Errore AI: '), backgroundColor: Colors.red),
       );
     } finally {
       setState(() {
@@ -93,23 +120,20 @@ class _SystemsHubScreenState extends State<SystemsHubScreen> {
   }
 
   void _generateSystem() {
-    if (_selectedNumbers.length < _targetNumbers) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Seleziona $_targetNumbers numeri per procedere.'), backgroundColor: Colors.orange),
-      );
-      return;
-    }
-
     HapticFeedback.lightImpact();
-    // Naviga alla result screen passando i parametri
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => SystemResultScreen(
-          pool: _selectedNumbers.toList()..sort(),
-          superstar: _selectedSuperstar,
-          guarantee: _guarantee,
-        ),
+        builder: (context) {
+          return SystemResultScreen(
+            type: _systemType,
+            pool: _selectedNumbers.toList()..sort(),
+            basi: _basiNumbers.toList()..sort(),
+            varianti: _variantiNumbers.toList()..sort(),
+            superstar: _selectedSuperstar,
+            guarantee: _guarantee,
+          );
+        }
       ),
     );
   }
@@ -117,68 +141,37 @@ class _SystemsHubScreenState extends State<SystemsHubScreen> {
   void _toggleNumber(int number) {
     HapticFeedback.lightImpact();
     setState(() {
-      if (_selectedNumbers.contains(number)) {
-        _selectedNumbers.remove(number);
+      if (_systemType == SystemType.basiVarianti) {
+        if (_basiNumbers.contains(number)) {
+          _basiNumbers.remove(number);
+          _variantiNumbers.add(number);
+        } else if (_variantiNumbers.contains(number)) {
+          _variantiNumbers.remove(number);
+        } else {
+          if (_basiNumbers.length < 5) {
+            _basiNumbers.add(number);
+          } else {
+            _variantiNumbers.add(number);
+          }
+        }
       } else {
-        if (_selectedNumbers.length < _targetNumbers) {
-          _selectedNumbers.add(number);
+        if (_selectedNumbers.contains(number)) {
+          _selectedNumbers.remove(number);
+        } else {
+          if (_selectedNumbers.length < _targetNumbers) {
+            _selectedNumbers.add(number);
+          }
         }
       }
     });
   }
-
-  Future<void> _pickSuperstar() async {
-    final selected = await showDialog<int>(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Scegli SuperStar', style: TextStyle(color: Colors.amber)),
-          backgroundColor: Theme.of(context).colorScheme.surface,
-          content: SizedBox(
-            width: double.maxFinite,
-            height: 300,
-            child: GridView.builder(
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 6,
-                crossAxisSpacing: 8,
-                mainAxisSpacing: 8,
-              ),
-              itemCount: 90,
-              itemBuilder: (context, index) {
-                int num = index + 1;
-                return InkWell(
-                  onTap: () => Navigator.pop(context, num),
-                  child: CircleAvatar(
-                    backgroundColor: Colors.white10,
-                    child: Text(num.toString(), style: const TextStyle(color: Colors.white)),
-                  ),
-                );
-              },
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, null), // clear
-              child: const Text('Rimuovi', style: TextStyle(color: Colors.redAccent)),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Annulla', style: TextStyle(color: Colors.white)),
-            ),
-          ],
-        );
-      }
-    );
-
-    if (selected != null || (selected == null && ModalRoute.of(context)?.isCurrent != true)) {
-      // Se selected == null e il dialog è stato chiuso con 'Rimuovi', allora resettiamo
-      // Ma showDialog restituisce null sia per Rimuovi (passato esplicitamente come null) che per back button/tap fuori (implicitamente null).
-      // Usiamo una logica più semplice:
+  
+  bool _canGenerate() {
+    if (_systemType == SystemType.basiVarianti) {
+        return _basiNumbers.isNotEmpty && _variantiNumbers.length >= (6 - _basiNumbers.length);
     }
-    
-    // Per gestire il Rimuovi propriamente:
+    return _selectedNumbers.length == _targetNumbers;
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -195,7 +188,6 @@ class _SystemsHubScreenState extends State<SystemsHubScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // Tipo di Garanzia
                   Card(
                     color: Theme.of(context).colorScheme.surface,
                     elevation: 4,
@@ -204,61 +196,93 @@ class _SystemsHubScreenState extends State<SystemsHubScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text('Tipo di Sistema', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.white)),
+                          const Text('Tipologia di Sistema', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.white)),
                           const SizedBox(height: 8),
-                          RadioListTile<SystemGuarantee>(
+                          RadioListTile<SystemType>(
                             title: const Text('Integrale', style: TextStyle(color: Colors.white)),
-                            subtitle: const Text('Massima probabilità. Fino a 10 numeri.', style: TextStyle(color: Colors.white54, fontSize: 12)),
-                            value: SystemGuarantee.integral,
-                            groupValue: _guarantee,
+                            subtitle: const Text('Sviluppa tutte le combinazioni possibili.', style: TextStyle(color: Colors.white54, fontSize: 12)),
+                            value: SystemType.integral,
+                            groupValue: _systemType,
                             activeColor: Colors.cyanAccent,
-                            onChanged: _onGuaranteeChanged,
+                            onChanged: _onTypeChanged,
                           ),
-                          RadioListTile<SystemGuarantee>(
-                            title: const Text('Ridotto: Garanzia 4', style: TextStyle(color: Colors.white)),
-                            subtitle: const Text('Ottimo compromesso costi/benefici. Da 9 a 15 numeri.', style: TextStyle(color: Colors.white54, fontSize: 12)),
-                            value: SystemGuarantee.g4,
-                            groupValue: _guarantee,
+                          RadioListTile<SystemType>(
+                            title: const Text('Ridotto', style: TextStyle(color: Colors.white)),
+                            subtitle: const Text('Garanzia di vincita minore con costo ridotto.', style: TextStyle(color: Colors.white54, fontSize: 12)),
+                            value: SystemType.reduced,
+                            groupValue: _systemType,
                             activeColor: Colors.cyanAccent,
-                            onChanged: _onGuaranteeChanged,
+                            onChanged: _onTypeChanged,
                           ),
-                          RadioListTile<SystemGuarantee>(
-                            title: const Text('Ridotto: Garanzia 3', style: TextStyle(color: Colors.white)),
-                            subtitle: const Text('Costo minimo per esplorare tanti numeri. Da 9 a 15 numeri.', style: TextStyle(color: Colors.white54, fontSize: 12)),
-                            value: SystemGuarantee.g3,
-                            groupValue: _guarantee,
+                          RadioListTile<SystemType>(
+                            title: const Text('Basi e Varianti', style: TextStyle(color: Colors.white)),
+                            subtitle: const Text('Numeri fissi in ogni schedina, mescolati con le varianti.', style: TextStyle(color: Colors.white54, fontSize: 12)),
+                            value: SystemType.basiVarianti,
+                            groupValue: _systemType,
                             activeColor: Colors.cyanAccent,
-                            onChanged: _onGuaranteeChanged,
+                            onChanged: _onTypeChanged,
+                          ),
+                          RadioListTile<SystemType>(
+                            title: const Text('Cruciverba 6x6', style: TextStyle(color: Colors.white)),
+                            subtitle: const Text('36 numeri disposti in griglia.', style: TextStyle(color: Colors.white54, fontSize: 12)),
+                            value: SystemType.cruciverba,
+                            groupValue: _systemType,
+                            activeColor: Colors.cyanAccent,
+                            onChanged: _onTypeChanged,
                           ),
                         ],
                       ),
                     ),
                   ),
-                  const SizedBox(height: 16),
-
-                  // Slider per numero di numeri
-                  Card(
-                    color: Theme.of(context).colorScheme.surface,
-                    elevation: 4,
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Column(
+                  
+                  if (_systemType == SystemType.reduced) ...[
+                      const SizedBox(height: 16),
+                      Card(
+                        color: Theme.of(context).colorScheme.surface,
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text('Garanzia del Ridotto', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+                              RadioListTile<SystemGuarantee>(
+                                title: const Text('Garanzia 4', style: TextStyle(color: Colors.white)),
+                                value: SystemGuarantee.g4,
+                                groupValue: _guarantee,
+                                onChanged: _onGuaranteeChanged,
+                                activeColor: Colors.cyanAccent,
+                              ),
+                              RadioListTile<SystemGuarantee>(
+                                title: const Text('Garanzia 3', style: TextStyle(color: Colors.white)),
+                                value: SystemGuarantee.g3,
+                                groupValue: _guarantee,
+                                onChanged: _onGuaranteeChanged,
+                                activeColor: Colors.cyanAccent,
+                              ),
+                            ],
+                          ),
+                        )
+                      )
+                  ],
+                  
+                  if (_systemType != SystemType.basiVarianti && _systemType != SystemType.cruciverba) ...[
+                      const SizedBox(height: 16),
+                      Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              const Text('Numeri da giocare', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.white)),
-                              Text('$_targetNumbers', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 24, color: Colors.cyanAccent)),
+                              const Text('Quanti numeri?', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white)),
+                              Text('', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.cyanAccent)),
                             ],
                           ),
                           Slider(
                             value: _targetNumbers.toDouble(),
-                            min: _guarantee == SystemGuarantee.integral ? 7 : 9,
-                            max: _guarantee == SystemGuarantee.integral ? 10 : 15,
-                            divisions: _guarantee == SystemGuarantee.integral ? 3 : 6,
+                            min: 7,
+                            max: _systemType == SystemType.integral ? 10 : 15,
+                            divisions: _systemType == SystemType.integral ? 3 : 8,
                             activeColor: Colors.cyanAccent,
-                            label: _targetNumbers.toString(),
                             onChanged: (val) {
                               setState(() {
                                 _targetNumbers = val.toInt();
@@ -270,11 +294,9 @@ class _SystemsHubScreenState extends State<SystemsHubScreen> {
                           ),
                         ],
                       ),
-                    ),
-                  ),
+                  ],
                   const SizedBox(height: 16),
 
-                  // Griglia di Selezione
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -287,7 +309,10 @@ class _SystemsHubScreenState extends State<SystemsHubScreen> {
                     ],
                   ),
                   const SizedBox(height: 8),
-                  Text('Selezionati: ${_selectedNumbers.length} / $_targetNumbers', style: const TextStyle(color: Colors.white70)),
+                  if (_systemType == SystemType.basiVarianti)
+                    Text('Basi (Giallo): \/5 - Varianti (Azzurro): ', style: const TextStyle(color: Colors.white70))
+                  else
+                    Text('Selezionati: \ / ', style: const TextStyle(color: Colors.white70)),
                   const SizedBox(height: 16),
                   
                   Container(
@@ -307,15 +332,33 @@ class _SystemsHubScreenState extends State<SystemsHubScreen> {
                       itemCount: 90,
                       itemBuilder: (context, index) {
                         int number = index + 1;
-                        bool isSelected = _selectedNumbers.contains(number);
+                        bool isSelected = false;
+                        bool isBase = false;
+                        
+                        if (_systemType == SystemType.basiVarianti) {
+                            if (_basiNumbers.contains(number)) {
+                                isSelected = true;
+                                isBase = true;
+                            } else if (_variantiNumbers.contains(number)) {
+                                isSelected = true;
+                            }
+                        } else {
+                            isSelected = _selectedNumbers.contains(number);
+                        }
+                        
+                        Color bgColor = Colors.white;
+                        if (isSelected) {
+                            bgColor = isBase ? Colors.amber.shade600 : Colors.cyan.shade600;
+                        }
+                        
                         return GestureDetector(
                           onTap: () => _toggleNumber(number),
                           child: AnimatedContainer(
                             duration: const Duration(milliseconds: 200),
                             decoration: BoxDecoration(
-                              color: isSelected ? Colors.cyan.shade600 : Colors.white,
+                              color: bgColor,
                               borderRadius: BorderRadius.circular(6),
-                              border: Border.all(color: isSelected ? Colors.cyan.shade800 : Colors.grey.shade300),
+                              border: Border.all(color: isSelected ? (isBase ? Colors.amber.shade800 : Colors.cyan.shade800) : Colors.grey.shade300),
                             ),
                             child: Center(
                               child: Text(
@@ -333,87 +376,88 @@ class _SystemsHubScreenState extends State<SystemsHubScreen> {
                   ),
                   const SizedBox(height: 16),
                   
-                  // SuperStar
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
+                  // SuperStar (Omesso per brevità per Basi e varianti, ma si puo aggiungere)
+                  if (_systemType != SystemType.cruciverba) ...[
                       Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text('SuperStar (Opzionale):', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white)),
-                          const SizedBox(width: 16),
-                          if (_selectedSuperstar != null)
-                            CircleAvatar(
-                              backgroundColor: Colors.amber,
-                              child: Text(_selectedSuperstar.toString(), style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
-                            )
-                          else
-                            const Text('Non scelto', style: TextStyle(color: Colors.white54)),
+                          Row(
+                            children: [
+                              const Text('SuperStar (Opzionale):', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white)),
+                              const SizedBox(width: 16),
+                              if (_selectedSuperstar != null)
+                                CircleAvatar(
+                                  backgroundColor: Colors.amber,
+                                  child: Text(_selectedSuperstar.toString(), style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+                                )
+                              else
+                                const Text('Nessuno', style: TextStyle(color: Colors.white54)),
+                            ],
+                          ),
+                          TextButton(
+                            onPressed: () async {
+                              HapticFeedback.lightImpact();
+                              final selected = await showDialog<int?>(
+                                context: context,
+                                builder: (context) {
+                                  return AlertDialog(
+                                    title: const Text('Scegli SuperStar', style: TextStyle(color: Colors.amber)),
+                                    backgroundColor: Theme.of(context).colorScheme.surface,
+                                    content: SizedBox(
+                                      width: double.maxFinite,
+                                      height: 300,
+                                      child: GridView.builder(
+                                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                                          crossAxisCount: 6,
+                                          crossAxisSpacing: 8,
+                                          mainAxisSpacing: 8,
+                                        ),
+                                        itemCount: 90,
+                                        itemBuilder: (context, index) {
+                                          int num = index + 1;
+                                          return InkWell(
+                                            onTap: () => Navigator.pop(context, num),
+                                            child: CircleAvatar(
+                                              backgroundColor: _selectedSuperstar == num ? Colors.amber : Colors.white10,
+                                              child: Text(num.toString(), style: TextStyle(color: _selectedSuperstar == num ? Colors.black : Colors.white)),
+                                            ),
+                                          );
+                                        },
+                                      ),
+                                    ),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () => Navigator.pop(context, -1),
+                                        child: const Text('Rimuovi', style: TextStyle(color: Colors.redAccent)),
+                                      ),
+                                      TextButton(
+                                        onPressed: () => Navigator.pop(context),
+                                        child: const Text('Annulla', style: TextStyle(color: Colors.white)),
+                                      ),
+                                    ],
+                                  );
+                                }
+                              );
+
+                              if (selected != null) {
+                                setState(() {
+                                  if (selected == -1) {
+                                    _selectedSuperstar = null;
+                                  } else {
+                                    _selectedSuperstar = selected;
+                                  }
+                                });
+                              }
+                            },
+                            child: const Text('SCEGLI', style: TextStyle(color: Colors.amber, fontWeight: FontWeight.bold)),
+                          )
                         ],
                       ),
-                      TextButton(
-                        onPressed: () async {
-                          HapticFeedback.lightImpact();
-                          final selected = await showDialog<int?>(
-                            context: context,
-                            builder: (context) {
-                              return AlertDialog(
-                                title: const Text('Scegli SuperStar', style: TextStyle(color: Colors.amber)),
-                                backgroundColor: Theme.of(context).colorScheme.surface,
-                                content: SizedBox(
-                                  width: double.maxFinite,
-                                  height: 300,
-                                  child: GridView.builder(
-                                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                                      crossAxisCount: 6,
-                                      crossAxisSpacing: 8,
-                                      mainAxisSpacing: 8,
-                                    ),
-                                    itemCount: 90,
-                                    itemBuilder: (context, index) {
-                                      int num = index + 1;
-                                      return InkWell(
-                                        onTap: () => Navigator.pop(context, num),
-                                        child: CircleAvatar(
-                                          backgroundColor: _selectedSuperstar == num ? Colors.amber : Colors.white10,
-                                          child: Text(num.toString(), style: TextStyle(color: _selectedSuperstar == num ? Colors.black : Colors.white)),
-                                        ),
-                                      );
-                                    },
-                                  ),
-                                ),
-                                actions: [
-                                  TextButton(
-                                    onPressed: () => Navigator.pop(context, -1), // Usa -1 come segnale per rimuovere
-                                    child: const Text('Rimuovi', style: TextStyle(color: Colors.redAccent)),
-                                  ),
-                                  TextButton(
-                                    onPressed: () => Navigator.pop(context),
-                                    child: const Text('Annulla', style: TextStyle(color: Colors.white)),
-                                  ),
-                                ],
-                              );
-                            }
-                          );
-
-                          if (selected != null) {
-                            setState(() {
-                              if (selected == -1) {
-                                _selectedSuperstar = null;
-                              } else {
-                                _selectedSuperstar = selected;
-                              }
-                            });
-                          }
-                        },
-                        child: const Text('SCEGLI', style: TextStyle(color: Colors.amber, fontWeight: FontWeight.bold)),
-                      )
-                    ],
-                  ),
+                  ],
                   const SizedBox(height: 32),
 
-                  // Generate Button
                   ElevatedButton.icon(
-                    onPressed: _selectedNumbers.length == _targetNumbers ? _generateSystem : null,
+                    onPressed: _canGenerate() ? _generateSystem : null,
                     icon: const Icon(Icons.hub, color: Colors.white),
                     label: const Text('ELABORA SISTEMA', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
                     style: ElevatedButton.styleFrom(
