@@ -88,26 +88,50 @@ class _HomeScreenState extends State<HomeScreen> {
       
       if (mounted) {
         setState(() {
-          fetched.shuffle();
-          if (fetched.isEmpty) {
-            // Fallback se il database è vuoto
-            _currentStats = [
-              {
-                'title': '⏳ In Attesa',
-                'description': 'Le curiosità di oggi stanno per essere generate dall\'IA. Torna più tardi!',
-                'color': Colors.blueGrey,
-                'icon': Icons.hourglass_empty
-              },
-              {
-                'title': '🔮 Previsioni',
-                'description': 'Il motore Quantico sta elaborando le nuove estrazioni...',
-                'color': Colors.amber,
-                'icon': Icons.psychology
-              }
-            ];
-          } else {
-            _currentStats = fetched.take(10).toList();
+          // Curiosità statiche sempre presenti
+          List<Map<String, dynamic>> staticCuriosities = [
+            {
+              'title': '💡 Record Assoluto',
+              'description': 'Il jackpot più alto mai vinto al SuperEnalotto è stato di 371.133.424,51 €, vinto a Febbraio 2023!',
+              'color': Colors.amber,
+              'icon': Icons.emoji_events
+            },
+            {
+              'title': '🎲 Le Probabilità',
+              'description': 'Le probabilità di indovinare tutti e 6 i numeri sono 1 su 622.614.630. Meglio affidarsi all\'Intelligenza Artificiale!',
+              'color': Colors.deepPurpleAccent,
+              'icon': Icons.casino
+            },
+            {
+              'title': '📅 Numeri Gemelli',
+              'description': 'I "numeri gemelli" (11, 22, 33, ecc.) hanno la stessa identica probabilità di uscita matematica di una sequenza casuale.',
+              'color': Colors.cyan,
+              'icon': Icons.copy_all
+            },
+            {
+              'title': '🔢 90 Numeri',
+              'description': 'A differenza di altre lotterie europee, il SuperEnalotto è tra i giochi con il più ampio bacino di numeri, ben 90.',
+              'color': Colors.redAccent,
+              'icon': Icons.format_list_numbered
+            },
+            {
+              'title': '💰 Il SuperStar',
+              'description': 'Aggiungere il numero SuperStar non solo aumenta le categorie di vincita, ma può moltiplicare le vincite minori fino a 100 volte.',
+              'color': Colors.green,
+              'icon': Icons.star
+            }
+          ];
+
+          List<Map<String, dynamic>> finalCuriosities = [];
+          finalCuriosities.addAll(staticCuriosities);
+          
+          if (fetched.isNotEmpty) {
+            fetched.shuffle();
+            finalCuriosities.addAll(fetched.take(3)); // Prendi al massimo 3 curiosità generate dall'IA per oggi
           }
+          
+          finalCuriosities.shuffle(); // Mischia le statiche e quelle del giorno
+          _currentStats = finalCuriosities;
         });
       }
     } catch (e) {

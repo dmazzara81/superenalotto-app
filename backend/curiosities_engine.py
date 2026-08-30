@@ -39,17 +39,18 @@ def generate_and_save_curiosities(hot_numbers: list, cold_numbers: list, target_
         I numeri storicamente più "Caldi" (frequenti) calcolati oggi sono: {hot_numbers}.
         I numeri storicamente più "Freddi" (ritardatari) calcolati oggi sono: {cold_numbers}.
         
-        Genera esattamente 10 curiosità molto variegate per gli utenti dell'app. Esplora tanti argomenti diversi:
-        - 5 devono essere curiosità "generali" o matematiche (is_extraction_based = false). Puoi parlare di: Jackpot record storici, Pari vs Dispari, Numeri Gemelli (11, 22, 33...), Ambi o Terni inseparabili storicamente, Decine o Cadenze più frequenti, figure geometriche sulle schedine, probabilità matematiche (es. fare 6), mesi dell'anno più fortunati.
-        - 5 devono essere legate all'estrazione di oggi, ai numeri caldi/freddi forniti, al trend del periodo o coincidenze con la data (is_extraction_based = true). Puoi fare collegamenti del tipo: "Tra i caldi di oggi ci sono 3 numeri della decina del 40!", oppure "Il numero X oggi è caldo, riuscirà a spezzare il ritardo?", o parlare di numeri consecutivi tra i caldi/freddi. Sii creativo!
+        Genera esattamente 3 curiosità per gli utenti dell'app. 
+        REGOLE FONDAMENTALI:
+        1. Le 3 curiosità devono essere COMPLETAMENTE DIVERSE tra loro. Non ripetere mai lo stesso concetto, non dire la stessa cosa con parole diverse.
+        2. Scegli 3 argomenti totalmente separati tra questi: Jackpot record, Analisi dei Ritardatari (Freddi), Analisi dei Frequenti (Caldi), Pari vs Dispari, Numeri Consecutivi, Decine più frequenti, Coincidenze storiche bizzarre.
+        3. Una curiosità dovrebbe essere legata alla data di oggi ({target_date}) o ai numeri caldi/freddi attuali (is_extraction_based = true), mentre le altre due possono essere generiche o matematiche (is_extraction_based = false).
         
         Per ogni curiosità fornisci:
         - title: un titolo accattivante (max 4 parole) con un'emoji iniziale. Esempio: "🔥 I Super-Ritardatari"
-        - description: un testo di massimo 2 frasi molto ingaggiante.
-        - icon_name: un nome di un'icona Material Icons standard (es. "access_time_filled", "balance", "psychology", "star", "ac_unit").
+        - description: un testo di massimo 2 frasi molto ingaggiante e specifico.
+        - icon_name: un nome di un'icona Material Icons standard (es. "access_time_filled", "balance", "psychology", "star", "ac_unit", "trending_up").
         - color_hex: un colore esadecimale vivace (es. "#FF5252", "#448AFF", "#FFB300", "#00E676").
-        - is_extraction_based: true per le 5 legate ad oggi, false per le 5 generali.
-        """
+        - is_extraction_based: true o false a seconda del tipo.
         
         print("[*] Chiamata a Gemini in corso...")
         response = client.models.generate_content(
