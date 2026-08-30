@@ -217,7 +217,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
                 ),
                 if (isAnnual)
                   Container(
-                    margin: const EdgeInsets.top(4),
+                    margin: const EdgeInsets.only(top: 4),
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                     decoration: BoxDecoration(color: Colors.amber, borderRadius: BorderRadius.circular(8)),
                     child: const Text('RISPARMI IL 50%', style: TextStyle(color: Colors.black, fontSize: 10, fontWeight: FontWeight.bold)),

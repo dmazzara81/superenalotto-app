@@ -43,8 +43,8 @@ class RevenueCatService {
   /// Esegue l'acquisto di un pacchetto
   Future<bool> purchasePackage(Package package) async {
     try {
-      final customerInfo = await Purchases.purchasePackage(package);
-      return customerInfo.entitlements.all['pro_access']?.isActive ?? false;
+      final purchaseResult = await Purchases.purchasePackage(package);
+      return purchaseResult.customerInfo.entitlements.all['pro_access']?.isActive ?? false;
     } catch (e) {
       debugPrint('[RevenueCat] Errore durante acquisto: $e');
       return false;

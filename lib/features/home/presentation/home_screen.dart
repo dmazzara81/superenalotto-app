@@ -148,15 +148,15 @@ class _HomeScreenState extends State<HomeScreen> {
     // Estrazioni: Martedì(2), Giovedì(4), Venerdì(5), Sabato(6) alle 20:00
     List<int> drawDays = [DateTime.tuesday, DateTime.thursday, DateTime.friday, DateTime.saturday];
     
-    DateTime nextDraw = DateTime(now.year, now.month, now.day, 20, 0);
+    DateTime nextDraw = DateTime(now.year, now.month, now.day, 21, 0);
     
-    // Se oggi è giorno di estrazione e sono passate le 20:00, o non è giorno di estrazione
-    if ((drawDays.contains(now.weekday) && now.hour >= 20) || !drawDays.contains(now.weekday)) {
+    // Se oggi è giorno di estrazione e sono passate le 21:00, o non è giorno di estrazione
+    if ((drawDays.contains(now.weekday) && now.hour >= 21) || !drawDays.contains(now.weekday)) {
       int daysToAdd = 1;
       while (true) {
         DateTime checkDate = now.add(Duration(days: daysToAdd));
         if (drawDays.contains(checkDate.weekday)) {
-          nextDraw = DateTime(checkDate.year, checkDate.month, checkDate.day, 20, 0);
+          nextDraw = DateTime(checkDate.year, checkDate.month, checkDate.day, 21, 0);
           break;
         }
         daysToAdd++;
